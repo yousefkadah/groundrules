@@ -13,8 +13,8 @@ Schema changes are the easiest way to cause an outage or data loss. Be conservat
       JSON, and altering columns). If CI runs multiple engines, the migration must pass on all of them.
 - [ ] The schema builder does **not** guarantee a lock-free change: adding an index / FK / `NOT NULL` /
       default can **rewrite or lock a large table**. Assess the **production engine's** locking and use
-      an online strategy (concurrent index, batched change, or a tool like pt-osc/gh-ost) where a
-      table rewrite would cause downtime.
+      an online strategy for your engine — Postgres: `CREATE INDEX CONCURRENTLY` + `disable_ddl_transaction!`
+      and `NOT VALID` → `VALIDATE` constraints; MySQL: `pt-osc`/`gh-ost` — where a rewrite would cause downtime.
 - [ ] Add the right **indexes and foreign keys**; name constraints explicitly. Choose column types and
       sizes deliberately (money, ids, timestamps with timezone semantics).
 - [ ] Provide a **reversible migration** (a down/rollback in whatever migration tool the repo uses) **or**

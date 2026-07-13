@@ -39,4 +39,6 @@ module.exports = {
   hasPlaceholders: (cwd) => defaultApp.bodyBuilder.hasPlaceholders(cwd),
   emit: (cwd, opts) => defaultApp.generator.generate(cwd, opts),
   check: (cwd, opts) => defaultApp.checker.check(cwd, opts),
+  detectRepoAiPolicy: (cwd) => require('./support/aiPolicy').detectRepoAiPolicy(cwd),
+  hasAiOptOut: (text) => require('./support/aiPolicy').hasAiOptOut(text),
 };

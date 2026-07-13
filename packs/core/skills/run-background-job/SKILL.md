@@ -17,7 +17,8 @@ Queued work runs later, on another worker, possibly more than once. Design for t
 - [ ] Prevent overlap where it matters (a lock / "without overlapping"). Set a sensible **timeout** and
       **bounded retries with backoff**; decide what a final failure does.
 - [ ] **Re-establish tenant/user context inside the job** — don't assume the dispatcher's scope carries
-      over. Re-authorize.
+      over. **Re-authorize actor-driven work**; a system/background job may legitimately run with system
+      privileges, so don't force a user re-check where there is no user.
 - [ ] Handle **permanent failure** (a dead-letter / failed-job path) so a bad job doesn't vanish silently. Know the queue's ack semantics on worker crash.
 
 ## Test

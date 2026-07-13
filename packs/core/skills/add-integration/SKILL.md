@@ -27,6 +27,11 @@ juggling, webhook plumbing, and silent breakage when the provider changes. Work 
       retry a non-idempotent POST.
 - [ ] Typed request/response **DTOs** — no raw maps flowing around.
 - [ ] **Webhooks:** verify the signature first, dedupe by the provider's event id, respond fast (queue the work).
+- [ ] **OAuth:** validate `state` + PKCE, exact redirect-URI match, request the least scopes, and store
+      tokens **encrypted and tenant-scoped** (with revocation + rotation).
+- [ ] **Native/library integration** (linking a C library or a language-native SDK, not a web API): skip
+      the HTTP/webhook steps — handle feature-gating, build/link config (`build.rs`, pkg-config, vendored
+      vs system), versioning, licensing, and a cross-platform test matrix instead.
 - [ ] Push slow/external calls to background jobs. Map provider errors to your own error type — never leak a raw provider error to the UI.
 
 ## 4. Test against reality

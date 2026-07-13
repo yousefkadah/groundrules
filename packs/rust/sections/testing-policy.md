@@ -1,5 +1,10 @@
-- Run `cargo test` (narrowest: `cargo test <name>`); add `--all-features`/workspace flags the repo uses.
-  Paste command + output.
-- **"Done" includes `cargo fmt --check` and `cargo clippy`** — a green test with clippy warnings isn't done.
-- Unit tests in-module under `#[cfg(test)]`; integration tests in `tests/`. Keep tests hermetic — no real
-  network (use a mock server); cover the error paths, not just `Ok`.
+- Run `cargo test` with the feature combos the repo uses (build/test **with and without** optional
+  features as affected; `--workspace` for multi-crate). Paste command + output.
+- **"Done" = the repo's CI gate**, not one green test: `cargo fmt --all --check`, `cargo test`, and — if
+  adopted — `cargo clippy` and warning-free `cargo doc`.
+- Prefer **table-driven** unit tests in-module (`#[cfg(test)]`). Register integration tests through the
+  crate's existing harness (some set `autotests = false`) — don't just drop a file in `tests/`.
+- For CLIs, **real isolated temp files + child processes are the point** — assert stdout, stderr, and
+  exit status; don't "fake" the filesystem where the behavior *is* the filesystem.
+- **Property-based tests** (`proptest`/`quickcheck`, with a replayable seed) are great for invariants,
+  alongside deterministic boundary cases.

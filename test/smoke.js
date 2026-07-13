@@ -109,4 +109,25 @@ function initInto(dir) {
   ok(r.data.name === 'x' && r.data.description === 'y', 'frontmatter handles BOM + CRLF');
 }
 
+// 8. respects a repo's own AI opt-out policy (skips writing into a file that forbids AI)
+{
+  const { hasAiOptOut } = require('../src/support/aiPolicy');
+  ok(hasAiOptOut('No AI-generated pull requests are accepted.'), 'detects an AI opt-out sentence');
+  ok(!hasAiOptOut('We use Laravel and write good tests.'), 'no false positive on normal text');
+  const dir = scaffold({
+    'composer.json': JSON.stringify({ require: { 'laravel/framework': '^12' } }),
+    'artisan': '',
+    'CONTRIBUTING.md': 'No AI-generated contributions are accepted in this project.',
+    'AGENTS.md': '# Notes\n\nNo AI contributions, please.\n',
+  });
+  ok(lib.detectRepoAiPolicy(dir).includes('CONTRIBUTING.md'), 'detects repo AI policy in CONTRIBUTING.md');
+  const d = lib.detect(dir);
+  const c = lib.compose(['core', ...d.stacks]);
+  const p = []; p.dryRun = false; lib.writeCanonical(dir, c, p);
+  const emitPlan = lib.emit(dir, {});
+  ok(emitPlan.some((e) => e.path === 'AGENTS.md' && e.action === 'skipped'), 'skips the repo\'s anti-AI AGENTS.md');
+  ok(!fs.readFileSync(path.join(dir, 'AGENTS.md'), 'utf8').includes('groundrules:managed'), 'does not inject a managed block into it');
+  ok(lib.check(dir, {}).every((x) => x.path !== 'AGENTS.md'), 'check does not flag the untouched anti-AI file');
+}
+
 console.log(`ok - ${passed} smoke assertions passed`);

@@ -18,6 +18,8 @@ class GenerateCommand {
     const plan = this.app.generator.generate(args.cwd, { dryRun: args.dryRun, tools: args.tools, all: args.all });
     this.printer.regenerateHeader(args.dryRun);
     this.printer.plan(plan);
+    const skipped = plan.filter((p) => p.action === 'skipped').map((p) => p.path);
+    if (skipped.length) this.printer.aiPolicyWarning([], skipped);
     if (this.app.bodyBuilder.hasPlaceholders(args.cwd)) this.printer.placeholderWarningShort();
   }
 }

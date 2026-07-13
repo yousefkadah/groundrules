@@ -5,6 +5,7 @@ const { ADAPTERS } = require('../config/adapters');
 const Adapter = require('../models/Adapter');
 const strategies = require('../strategies');
 const { exists, read, write, listDirs, copyDir } = require('../support/fs');
+const { hasAiOptOut, stripManaged } = require('../support/aiPolicy');
 
 /** Emits every selected adapter from .ai/, plus copies skills and the PR template. */
 class AdapterGenerator {
@@ -27,6 +28,7 @@ class AdapterGenerator {
     for (const adapter of this.selectAdapters(opts.tools, opts.all)) {
       const target = path.join(cwd, adapter.path);
       const existing = exists(target) ? read(target) : '';
+      if (existing && hasAiOptOut(stripManaged(existing))) { plan.push({ path: adapter.path, action: 'skipped' }); continue; }
       const next = strategies[adapter.kind].render(body, existing);
       const action = !existing ? 'create' : (existing === next ? 'unchanged' : 'update');
       plan.push({ path: adapter.path, action });

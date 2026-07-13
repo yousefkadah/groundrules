@@ -19,6 +19,9 @@ The stack pack names the exact test runner + command; this is the discipline.
 - [ ] Prefer **deterministic factory states and explicit edge values** for the behavior under test —
       not broad random data (flaky). Use the project's factories for **persisted** state; a plain
       constructor/builder is fine for pure-unit behavior on unsaved objects.
+- [ ] **Property-based testing** (with shrinking + a replayable seed — FsCheck / proptest / fast-check /
+      Hypothesis) is excellent for invariants; use it alongside deterministic boundary examples, not
+      unseeded randomness.
 - [ ] Before a suite that wipes/migrates the DB, confirm it targets a **disposable** database (testing
       env + test connection), never a real one.
 - [ ] One behavior per test; a clear name stating the expectation. Don't assert incidental details.

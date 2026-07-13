@@ -3,6 +3,9 @@
   don't stash or discard the human's in-progress work.
 - **One logical change per branch/PR.** Keep it reviewable.
 - **Commit/push only when asked.** Don't push on your own initiative.
+- **If the repo restricts AI contributions** (an `AI_POLICY`, or a `CONTRIBUTING`/`AGENTS.md` directive),
+  don't open PRs, issues, or comments as if a human authored them — prepare the change locally with test
+  evidence for a maintainer to review and submit.
 - Follow the repo's existing commit convention (check `git log`). If it uses Conventional Commits
   (`feat(scope): …`), match it.
 - Fill in the PR template completely, including the **test command + output** as evidence and a link to

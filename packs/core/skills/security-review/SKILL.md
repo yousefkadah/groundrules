@@ -43,12 +43,20 @@ HTML)? Sanitize server-side, allow-list URL schemes (no `javascript:`), and test
 revocation, and rotation? Session fixation prevented on privilege change? MFA and account-recovery paths
 safe? (Use the framework's own auth primitives, not home-rolled ones.)
 
+**Real-time / channels** — WebSocket / ActionCable / pub-sub: subscriptions authenticate and verify
+membership; stream/channel names derived server-side; every broadcast and cache/Redis key tenant-scoped.
+
 **Data handling** — unsafe deserialization of untrusted data? Unbounded input (zip bombs, huge payloads)?
 
 **Dependencies** — new dep real, maintained, correctly spelled (no typosquat), pinned, licensed; install
 scripts reviewed?
 
 **Crypto / sessions** — no home-rolled crypto; strong password hashing; secure random for tokens.
+
+**Libraries / CLIs (not web apps)** — resource amplification (unbounded retries / timers / recursion →
+DoS); `unsafe`/FFI/`mmap` invariants; running subprocesses or resolving `PATH`; symlink/TOCTOU on file
+ops; terminal-escape injection in output; state leaking across calls; sensitive data in
+logs/telemetry/exceptions.
 
 ## Output
 For each: `SEVERITY — path:line — what an attacker does — the fix.`

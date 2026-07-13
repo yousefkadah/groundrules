@@ -31,8 +31,8 @@ ${paint('bold', 'Examples')}
 class Printer {
   /* eslint-disable no-console */
   plan(plan) {
-    const icon = { create: paint('green', '  +'), overwrite: paint('yellow', '  ~'), update: paint('yellow', '  ~'), unchanged: paint('dim', '  ='), kept: paint('dim', '  ·') };
-    const suffix = { unchanged: paint('dim', ' (unchanged)'), kept: paint('dim', ' (kept — --force to overwrite)') };
+    const icon = { create: paint('green', '  +'), overwrite: paint('yellow', '  ~'), update: paint('yellow', '  ~'), unchanged: paint('dim', '  ='), kept: paint('dim', '  ·'), skipped: paint('yellow', '  ⚠') };
+    const suffix = { unchanged: paint('dim', ' (unchanged)'), kept: paint('dim', ' (kept — --force to overwrite)'), skipped: paint('yellow', ' (skipped — repo AI policy)') };
     for (const p of plan) console.log(`${icon[p.action] || '  ?'} ${p.path}${suffix[p.action] || ''}`);
   }
 
@@ -67,6 +67,12 @@ class Printer {
     console.log('\n' + paint('yellow', "⚠ .ai/context.md has «placeholders» — run the bootstrap skill in your agent to fill this project's real context before relying on the rules."));
   }
   placeholderWarningShort() { console.log(paint('yellow', '⚠ .ai/context.md still has «placeholders» — run the bootstrap skill to fill them.')); }
+
+  aiPolicyWarning(files, skipped) {
+    console.log('\n' + paint('yellow', '⚠ This repo appears to restrict AI contributions' + (files && files.length ? ` (see ${files.join(', ')})` : '') + '.'));
+    if (skipped && skipped.length) console.log(paint('yellow', `  Left untouched (its file forbids AI): ${skipped.join(', ')}`));
+    console.log(paint('dim', "  Respect the repo's policy — prepare local changes for a human to review; don't open PRs/comments as if a person authored them."));
+  }
 
   nextSteps(dryRun) {
     console.log('\n' + paint('bold', 'Next:'));

@@ -2,6 +2,7 @@
 
 const path = require('path');
 const { exists, read } = require('../support/fs');
+const { hasAiOptOut, stripManaged } = require('../support/aiPolicy');
 const strategies = require('../strategies');
 
 /** The CI drift gate: reports adapters out of sync with .ai/. */
@@ -17,7 +18,9 @@ class DriftChecker {
     for (const adapter of this.generator.selectAdapters(opts.tools, opts.all)) {
       const target = path.join(cwd, adapter.path);
       if (!exists(target)) { drift.push({ path: adapter.path, reason: 'missing' }); continue; }
-      if (!strategies[adapter.kind].isInSync(read(target), body)) {
+      const content = read(target);
+      if (hasAiOptOut(stripManaged(content))) continue; // repo's file forbids AI — we don't manage it
+      if (!strategies[adapter.kind].isInSync(content, body)) {
         drift.push({ path: adapter.path, reason: 'out of date' });
       }
     }

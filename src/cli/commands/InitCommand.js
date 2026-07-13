@@ -23,6 +23,10 @@ class InitCommand {
     this.printer.wroteHeader(args.dryRun);
     this.printer.plan(plan);
     this.printer.recommends(canonical.recommends);
+    const { detectRepoAiPolicy } = require('../../support/aiPolicy');
+    const skippedPaths = plan.filter((p) => p.action === 'skipped').map((p) => p.path);
+    const policyFiles = detectRepoAiPolicy(args.cwd);
+    if (policyFiles.length || skippedPaths.length) this.printer.aiPolicyWarning(policyFiles, skippedPaths);
     if (this.app.bodyBuilder.hasPlaceholders(args.cwd)) this.printer.placeholderWarning();
     this.printer.nextSteps(args.dryRun);
   }
