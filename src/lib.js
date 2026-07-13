@@ -128,6 +128,12 @@ function detect(cwd) {
     signals.push(exists(path.join(cwd, 'manage.py')) ? 'manage.py (django)' : (exists(path.join(cwd, 'pyproject.toml')) ? 'pyproject.toml' : 'requirements.txt'));
   }
   if (exists(path.join(cwd, 'go.mod'))) { stacks.push('go'); signals.push('go.mod'); }
+  if (exists(path.join(cwd, 'bin/rails')) || exists(path.join(cwd, 'config/application.rb'))) { stacks.push('rails'); signals.push('rails'); }
+  if (exists(path.join(cwd, 'Cargo.toml'))) { stacks.push('rust'); signals.push('Cargo.toml'); }
+  try {
+    const rootFiles = fs.readdirSync(cwd);
+    if (exists(path.join(cwd, 'global.json')) || rootFiles.some((f) => f.endsWith('.sln') || f.endsWith('.csproj'))) { stacks.push('dotnet'); signals.push('.NET project'); }
+  } catch { /* unreadable dir */ }
 
   // only keep stacks that have a pack shipped
   const available = stacks.filter((id) => exists(path.join(PACKS_DIR, id)));

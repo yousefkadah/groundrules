@@ -1,11 +1,16 @@
-# groundrules
+# Groundrules
 
 **One source of truth for AI coding agents.** Detect your stack, scaffold engineering standards +
 skills, and generate every tool's rules file — `AGENTS.md`, `CLAUDE.md`, Cursor, Copilot, Gemini — from
 one place, kept in sync.
 
-> Works for **any** project. If it detects your stack (Laravel, Node/TS, Python, Go…), it layers in that
-> stack's rules and recommends its tooling. If it doesn't, you still get the universal core.
+<p align="center">
+  <img src="assets/hero.svg" alt="Groundrules: detect your stack → compose one .ai/ source (core + stack packs) → generate every agent's rules file, in sync" width="960">
+</p>
+
+> Works for **any** project. If it detects your stack (Laravel, Vue/Inertia, Node/TS, Python, Go, Rails,
+> Rust, .NET), it layers in that stack's rules and recommends its tooling. If it doesn't, you still get
+> the universal, security-first core.
 
 ---
 
@@ -13,25 +18,27 @@ one place, kept in sync.
 
 Every coding agent reads a different file — `CLAUDE.md`, `AGENTS.md`, `.cursor/rules/*.mdc`,
 `.github/copilot-instructions.md`, `GEMINI.md`. Maintaining them by hand means drift and duplication.
-`groundrules` keeps **one canonical source** (`.ai/`) and generates the rest, so your standards are written
+Groundrules keeps **one canonical source** (`.ai/`) and generates the rest, so your standards are written
 once and every agent obeys the same rules.
 
 It's not "another rules generator" — it's a **curated, security-first standards library** that happens
-to ship with a generator. The value is the content in `packs/`, authored to staff-engineer quality.
+to ship with a generator. The value is the content in `packs/`, authored to staff-engineer quality and
+**stress-tested on real code** (see [Battle-tested](#battle-tested)).
 
 ## Quick start
 
 ```bash
 # from your project root
-npx groundrules init          # (after npm publish) — or, from a clone:
-node /path/to/groundrules/bin/groundrules.js init
-
-# it detects your stack, writes .ai/ + every agent's adapter, and prints stack recommendations
+npx @yousefkadah/groundrules init
 ```
 
-Then point your coding agent at the repo and run the **`bootstrap`** skill — it scans your codebase and
-fills in `.ai/context.md` + drafts project-specific skills. Edit `.ai/`, run `groundrules generate`, and
-every adapter re-syncs.
+It detects your stack, writes `.ai/` + every agent's adapter, and prints stack recommendations. Then
+point your coding agent at the repo and run the **`bootstrap`** skill — it scans your codebase and fills
+in `.ai/context.md` + drafts project-specific skills. Edit `.ai/`, run `groundrules generate`, and every
+adapter re-syncs.
+
+> The CLI is dumb and deterministic; **your agent supplies the intelligence** (the `bootstrap` scan), so
+> Groundrules never needs an API key of its own.
 
 ## Commands
 
@@ -47,53 +54,75 @@ Flags: `--dry-run`, `--tools=agents,claude,cursor,copilot,gemini`, `--all`, `--c
 ## What it writes
 
 ```
-.ai/                          # ← the canonical source you edit
+.ai/                             # ← the canonical source you edit
   context · coding-standards · testing-policy · security-policy · code-review · pr-policy · release-policy
-  skills/{bootstrap,security-review,add-integration,write-tests}/SKILL.md
-AGENTS.md                     # canonical rollup (the cross-tool standard)   ┐
-CLAUDE.md                     # @imports AGENTS.md                           │ generated,
+  skills/{bootstrap,security-review,add-integration,write-tests,add-database-change,run-background-job}/SKILL.md
+AGENTS.md                        # canonical rollup (the cross-tool standard)   ┐
+CLAUDE.md                        # @imports AGENTS.md                           │ generated,
 .cursor/rules/groundrules.mdc    # transformed frontmatter                      │ inside managed
-.github/copilot-instructions.md                                             │ markers — your
-GEMINI.md                                                                    │ own edits outside
-.claude/skills/*              # skills copied for lazy-loading                │ them survive
-.github/pull_request_template.md                                            ┘
+.github/copilot-instructions.md                                                │ markers — your
+GEMINI.md                                                                       │ own edits outside
+.claude/skills/*                 # skills copied for lazy-loading                │ them survive
+.github/pull_request_template.md                                               ┘
 ```
 
 ## How composition works
 
 Content lives in `packs/`. **Core** (universal principles) is applied first; each detected **stack pack**
 adds only stack-specific detail (commands, idioms, deps) under each section. One rule decides placement:
-*names a command/extension/framework API → pack; states a principle → core.*
+*names a command / extension / framework API → pack; states a principle → core.*
 
-```
-packs/core/            security · testing discipline · code-review · PR hygiene · the skills
-packs/laravel-php/     php/artisan/Pest/Pint idioms  + recommends laravel/boost
-packs/node-ts/         TypeScript strict · vitest/jest
-packs/python/          type hints · ruff · pytest
-packs/go/              gofmt · error wrapping · go test
-```
+| Pack | Fires on | Adds |
+|---|---|---|
+| `core` | always | security-first guardrails · testing discipline · code-review · PR hygiene · 6 skills |
+| `laravel-php` | `artisan` / `laravel/framework` | Pest·PHPUnit detection, service-vs-FormRequest validation, `queue:restart`, phpstan/psalm gate — **recommends Laravel Boost** |
+| `vue` | `vue` / `@inertiajs/vue3` | Vue/Inertia conventions, a11y, SSR/hydration (no TypeScript assumed) |
+| `node-ts` | `tsconfig` / `typescript` | TS-strict, vitest/jest |
+| `python` | `pyproject` / `manage.py` | type hints · ruff · pytest (Django/FastAPI aware) |
+| `go` | `go.mod` | gofmt · error wrapping · `go test -race` |
+| `rails` | `bin/rails` | RuboCop · strong params · RSpec/Minitest |
+| `rust` | `Cargo.toml` | rustfmt · clippy · `Result`/`?` |
+| `dotnet` | `*.csproj` / `*.sln` | nullable refs · async-all-the-way · `dotnet test` |
 
 Adding a pack = a folder with `pack.json` + `sections/*.md` (+ optional `skills/`). Contributions welcome.
+
+## Battle-tested
+
+The packs aren't hand-waved. Groundrules was run on a real, production-scale Laravel + Vue app
+([Monica](https://github.com/monicahq/monica)) and the generated guidance was audited by **OpenAI Codex**
+*and* an independent Opus operator, over three rounds — feeding every finding back into the packs until
+Codex reported **no critical or high issues remaining**. That loop caught and fixed things a generic
+template ships wrong: Pest-vs-PHPUnit detection, validation that fits a service-layer app, tenant
+isolation beyond queries, an instruction-trust hierarchy, webhook/OAuth hardening, and more.
+
+## CI drift gate
+
+Keep every agent's rules file honest — copy [`examples/groundrules-check.yml`](examples/groundrules-check.yml)
+into your repo's `.github/workflows/` to fail a PR when `.ai/` changed but the adapters weren't regenerated:
+
+```yaml
+- run: npx @yousefkadah/groundrules check
+```
 
 ## Rides the ecosystem — doesn't fight it
 
 - **`AGENTS.md`** is the convergence standard (read by Codex, Cursor, Copilot, Windsurf, Gemini, Zed,
-  Junie, Aider… and Claude Code). groundrules makes it the canonical file and adapts the rest.
+  Junie, Aider… and Claude Code). Groundrules makes it the canonical file and adapts the rest.
 - **Laravel Boost** stays the authority on Laravel *facts* — the Laravel pack recommends it and defers to it.
 - **Skills** use the open [`SKILL.md`](https://agentskills.io) standard.
 
 ## Roadmap
 
-- Distribute as a single Go binary via `brew` / `uvx` / `npx` (engine port; the content packs are the product).
-- More stack packs (Rails, Rust, .NET) and a `--all` set of long-tail adapters (Windsurf, Cline, Junie, Aider).
-- `groundrules check` GitHub Action.
+- Single Go binary via `brew` / `uvx` (engine port; the content packs are the product — `npx` already works today).
+- A `--all` set of long-tail adapters (Windsurf, Cline, Junie, Aider).
+- More stack packs — contributions welcome.
 
 ## Status
 
-MVP — the Node engine is functional (detect · compose · generate · check, all tested). Working name;
-may be renamed before a formal launch.
+Working MVP — the Node engine (detect · compose · generate · check) is smoke-tested and CI-gated. The npm
+package is scoped (`@yousefkadah/groundrules`) because the bare name was taken; the CLI command is still
+`groundrules`.
 
 ## License
 
-MIT © 2026 Yousef Kadah. The Laravel pack originated in
-[`laravel-ai-kit`](https://github.com/yousefkadah/laravel-ai-kit).
+MIT © 2026 Yousef Kadah.

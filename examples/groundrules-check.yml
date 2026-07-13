@@ -1,0 +1,17 @@
+# Copy this into YOUR project's .github/workflows/ to gate PRs on agent-rule drift.
+# It fails the build if AGENTS.md / CLAUDE.md / .cursor/rules / copilot / GEMINI.md
+# are out of sync with .ai/ (i.e. someone edited .ai/ but didn't run `groundrules generate`).
+name: groundrules-check
+on:
+  pull_request:
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check agent adapters are in sync with .ai/
+        run: npx @yousefkadah/groundrules check

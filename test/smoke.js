@@ -64,6 +64,14 @@ function initInto(dir) {
   ok(!d.stacks.includes('node-ts'), 'does NOT misfire node-ts on a plain-JS Vue repo');
 }
 
+// 3b. Rust (Cargo.toml) and .NET (.csproj) detection
+{
+  const rustDir = scaffold({ 'Cargo.toml': '[package]\nname = "x"' });
+  ok(lib.detect(rustDir).stacks.includes('rust'), 'detects rust from Cargo.toml');
+  const dotnetDir = scaffold({ 'App.csproj': '<Project Sdk="Microsoft.NET.Sdk" />' });
+  ok(lib.detect(dotnetDir).stacks.includes('dotnet'), 'detects dotnet from .csproj');
+}
+
 // 4. Bare: universal core only, still generates adapters
 {
   const dir = scaffold({ 'README.md': '# x' });

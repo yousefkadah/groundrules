@@ -1,0 +1,8 @@
+{
+  "id": "rails",
+  "name": "Ruby on Rails",
+  "extends": "core",
+  "description": "Idiomatic Rails + Ruby (RuboCop, strong params, ActiveRecord) and the test workflow.",
+  "detect": "bin/rails or config/application.rb present",
+  "recommends": []
+}

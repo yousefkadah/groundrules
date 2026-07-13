@@ -1,5 +1,5 @@
 {
-  "name": "groundrules",
+  "name": "@yousefkadah/groundrules",
   "version": "0.1.0",
   "description": "One source of truth for AI coding agents — detect your stack, scaffold standards + skills, and generate every tool's rules file (AGENTS.md, CLAUDE.md, Cursor, Copilot, Gemini) from one place.",
   "bin": {
@@ -16,6 +16,17 @@
   ],
   "scripts": {
     "test": "node test/smoke.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yousefkadah/groundrules.git"
+  },
+  "homepage": "https://github.com/yousefkadah/groundrules#readme",
+  "bugs": {
+    "url": "https://github.com/yousefkadah/groundrules/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "license": "MIT",
   "author": "Yousef Kadah",
