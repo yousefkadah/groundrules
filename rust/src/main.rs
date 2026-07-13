@@ -762,6 +762,26 @@ fn extract_rules(content: &str) -> String {
     collapse_blank(&kept.join("\n")).trim().to_string()
 }
 
+/// Drop paragraph blocks already emitted by an earlier source. Only MULTI-LINE
+/// blocks are de-duplicated (same big Boost/rules block in AGENTS.md + CLAUDE.md
+/// shouldn't seed twice); single-line blocks are always kept. Mirrors the JS
+/// `dedupeBlocks`: same whitespace-normalized key, same `\n`-membership test.
+fn dedup_blocks(text: &str, seen_blocks: &mut HashSet<String>) -> String {
+    let mut kept: Vec<&str> = Vec::new();
+    for para in text.split("\n\n") {
+        let key: String = para.split_whitespace().collect::<Vec<_>>().join(" ");
+        let multi = para.contains('\n');
+        if multi && !key.is_empty() && seen_blocks.contains(&key) {
+            continue;
+        }
+        kept.push(para);
+        if multi && !key.is_empty() {
+            seen_blocks.insert(key);
+        }
+    }
+    kept.join("\n\n").trim().to_string()
+}
+
 fn is_ours(name: &str) -> bool {
     name == "groundrules.md" || name.starts_with("groundrules.") || name.starts_with("groundrules-")
 }
@@ -803,6 +823,7 @@ struct Imported {
 
 fn collect_import(cwd: &Path) -> Option<Imported> {
     let mut seen: HashSet<String> = HashSet::new();
+    let mut seen_blocks: HashSet<String> = HashSet::new();
     let mut blocks: Vec<String> = Vec::new();
     let mut labels: Vec<String> = Vec::new();
     let mut consumed: HashSet<String> = HashSet::new();
@@ -823,12 +844,16 @@ fn collect_import(cwd: &Path) -> Option<Imported> {
         if text.is_empty() {
             continue;
         }
-        let norm: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
-        if seen.contains(&norm) {
-            continue;
+        let whole: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
+        if seen.contains(&whole) {
+            continue; // exact full duplicate
         }
-        seen.insert(norm);
-        blocks.push(format!("### From `{}`\n\n{}", rel, text));
+        seen.insert(whole);
+        let deduped = dedup_blocks(&text, &mut seen_blocks);
+        if deduped.is_empty() {
+            continue; // contributed nothing beyond an earlier source
+        }
+        blocks.push(format!("### From `{}`\n\n{}", rel, deduped));
         labels.push(rel.clone());
         if target {
             consumed.insert(rel.clone());

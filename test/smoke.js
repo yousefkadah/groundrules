@@ -281,4 +281,18 @@ function initInto(dir) {
   ok(!found.body.includes('\r'), 'CRLF stripped to LF in the imported body (Rust-parity)');
 }
 
+// 17. import block-dedup: a big multi-line block shared across two sources appears once
+{
+  const shared = '## Shared\n\n- rule line one that is shared across both files\n- rule line two also shared here\n- rule line three shared as well';
+  const dir = scaffold({
+    'AGENTS.md': '# Agents\n\n' + shared + '\n\n- agents-only unique line for context',
+    'CLAUDE.md': '# Claude\n\n' + shared + '\n\n- claude-only unique line for context',
+  });
+  const found = lib.importRules(dir);
+  ok(found.imported === true, 'imports both sources');
+  const n = (found.body.match(/rule line two also shared here/g) || []).length;
+  ok(n === 1, `shared multi-line block de-duplicated (appears ${n}x, want 1)`);
+  ok(/agents-only unique/.test(found.body) && /claude-only unique/.test(found.body), 'unique single-line content from both sources kept');
+}
+
 console.log(`ok - ${passed} smoke assertions passed`);

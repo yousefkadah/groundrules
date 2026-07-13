@@ -23,6 +23,28 @@ function extract(content) {
   return body.split(/\r?\n/).filter((l) => !isPlumbingLine(l)).join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
+const norm = (s) => s.replace(/\s+/g, ' ').trim();
+
+/**
+ * Drop paragraph blocks already emitted by an earlier source. Only MULTI-LINE
+ * blocks are de-duplicated (a repo that puts the same big Laravel Boost / rules
+ * block in both AGENTS.md and CLAUDE.md shouldn't seed it twice); single-line
+ * blocks (headings, one-liners) are always kept so structure survives. Uses the
+ * same whitespace-normalized key as the whole-file dedup, and `\n` membership as
+ * the multi-line test — both byte-trivial to mirror in the Rust port.
+ */
+function dedupeBlocks(text, seenBlocks) {
+  const kept = [];
+  for (const para of text.split(/\n\n/)) {
+    const key = norm(para);
+    const multi = para.includes('\n');
+    if (multi && key && seenBlocks.has(key)) continue;
+    kept.push(para);
+    if (multi && key) seenBlocks.add(key);
+  }
+  return kept.join('\n\n').trim();
+}
+
 const isOurs = (name) => name === 'groundrules.md' || name.startsWith('groundrules.') || name.startsWith('groundrules-');
 
 /**
@@ -58,7 +80,8 @@ class ImportService {
    *   consumedTargets?:Set<string>, superseded?:string[]}}
    */
   collect(cwd) {
-    const seen = new Set();
+    const seen = new Set();       // whole-file normalized (skip exact full duplicates)
+    const seenBlocks = new Set(); // multi-line paragraph blocks already emitted
     const blocks = [];
     const labels = [];
     const consumedTargets = new Set();
@@ -71,10 +94,12 @@ class ImportService {
       if (!exists(abs) || isSymlink(abs)) continue;
       const text = extract(read(abs));
       if (!text) continue;
-      const norm = text.replace(/\s+/g, ' ').trim();
-      if (seen.has(norm)) continue; // e.g. CLAUDE.md that only @imports AGENTS.md, or duplicate copies
-      seen.add(norm);
-      blocks.push(`### From \`${cand.file}\`\n\n${text}`);
+      const whole = norm(text);
+      if (seen.has(whole)) continue; // e.g. CLAUDE.md that only @imports AGENTS.md, or a full copy
+      seen.add(whole);
+      const deduped = dedupeBlocks(text, seenBlocks); // drop big blocks already imported from an earlier file
+      if (!deduped) continue; // contributed nothing beyond what an earlier source already carried
+      blocks.push(`### From \`${cand.file}\`\n\n${deduped}`);
       labels.push(cand.file);
       if (cand.target) consumedTargets.add(cand.file);
       if (cand.legacy) superseded.push(cand.file);
