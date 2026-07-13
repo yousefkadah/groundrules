@@ -9,10 +9,6 @@ class ImportAdapterStrategy extends AdapterStrategy {
     const inner = 'This project uses [`AGENTS.md`](AGENTS.md) as the single source of truth for AI agent rules.\n\n@AGENTS.md';
     return upsertManaged(existing, inner);
   }
-
-  isInSync(content) {
-    return content.includes('@AGENTS.md');
-  }
 }
 
 module.exports = ImportAdapterStrategy;

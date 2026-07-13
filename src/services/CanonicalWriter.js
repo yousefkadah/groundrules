@@ -4,21 +4,33 @@ const path = require('path');
 const { SECTION_ORDER } = require('../config/sections');
 const { exists, write, copyDir } = require('../support/fs');
 
-/** Writes a CanonicalSource into the project's .ai/ directory (the editable source). */
+const SAFE_NAME = /^[A-Za-z0-9._-]+$/;
+
+/**
+ * Writes a CanonicalSource into the project's .ai/ directory.
+ * **Create-only by default** — existing `.ai/*.md` and skills are KEPT (so a
+ * user's bootstrap edits survive a re-`init`); pass `plan.force` to overwrite.
+ */
 class CanonicalWriter {
   write(cwd, canonical, plan) {
     const aiDir = path.join(cwd, '.ai');
+    const force = !!plan.force;
 
     for (const { key } of SECTION_ORDER) {
       if (!canonical.sections[key]) continue;
       const target = path.join(aiDir, `${key}.md`);
-      plan.push({ path: path.relative(cwd, target), action: exists(target) ? 'overwrite' : 'create' });
+      const present = exists(target);
+      if (present && !force) { plan.push({ path: path.relative(cwd, target), action: 'kept' }); continue; }
+      plan.push({ path: path.relative(cwd, target), action: present ? 'overwrite' : 'create' });
       if (!plan.dryRun) write(target, canonical.sections[key].trim() + '\n');
     }
 
     for (const skill of canonical.skills) {
+      if (!SAFE_NAME.test(skill.name)) throw new Error(`unsafe skill name: ${skill.name}`);
       const dst = path.join(aiDir, 'skills', skill.name);
-      plan.push({ path: path.relative(cwd, path.join(dst, 'SKILL.md')), action: exists(dst) ? 'overwrite' : 'create' });
+      const present = exists(dst);
+      if (present && !force) { plan.push({ path: path.relative(cwd, path.join(dst, 'SKILL.md')), action: 'kept' }); continue; }
+      plan.push({ path: path.relative(cwd, path.join(dst, 'SKILL.md')), action: present ? 'overwrite' : 'create' });
       if (!plan.dryRun) copyDir(skill.srcDir, dst);
     }
 

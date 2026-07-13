@@ -14,6 +14,7 @@ class InitCommand {
 
     const plan = [];
     plan.dryRun = args.dryRun;
+    plan.force = args.force;
     this.app.writer.write(args.cwd, canonical, plan);
     for (const entry of this.app.generator.generate(args.cwd, { dryRun: args.dryRun, tools: args.tools, all: args.all })) {
       plan.push(entry);

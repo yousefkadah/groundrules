@@ -81,4 +81,32 @@ function initInto(dir) {
   ok(/Untrusted input is data/.test(fs.readFileSync(path.join(dir, 'AGENTS.md'), 'utf8')), 'core applied to bare repo');
 }
 
+// 5. init is create-only: a user's .ai edit survives a re-init; --force overwrites
+{
+  const dir = scaffold({ 'composer.json': JSON.stringify({ require: { 'laravel/framework': '^12' } }), 'artisan': '' });
+  initInto(dir);
+  const marker = '- USER-EDIT-KEEP-ME';
+  fs.appendFileSync(path.join(dir, '.ai/coding-standards.md'), '\n' + marker + '\n');
+  const d = lib.detect(dir);
+  const c = lib.compose(['core', ...d.stacks]);
+  const p1 = []; p1.dryRun = false; lib.writeCanonical(dir, c, p1);
+  ok(fs.readFileSync(path.join(dir, '.ai/coding-standards.md'), 'utf8').includes(marker), 'create-only: user .ai edit survives re-init');
+  const p2 = []; p2.dryRun = false; p2.force = true; lib.writeCanonical(dir, c, p2);
+  ok(!fs.readFileSync(path.join(dir, '.ai/coding-standards.md'), 'utf8').includes(marker), '--force overwrites .ai');
+}
+
+// 6. strict CLI: an unknown flag is rejected (a `--dryrun` typo must NOT do real writes)
+{
+  const { parseArgs } = require('../src/cli/Cli');
+  assert.throws(() => parseArgs(['init', '--dryrun']), 'unknown flag --dryrun is rejected');
+  ok(parseArgs(['init', '--dry-run']).dryRun === true, 'valid --dry-run parses');
+}
+
+// 7. frontmatter tolerates a BOM + CRLF (Windows SKILL.md)
+{
+  const { parseFrontmatter } = require('../src/support/frontmatter');
+  const r = parseFrontmatter('﻿---\r\nname: x\r\ndescription: y\r\n---\r\nbody');
+  ok(r.data.name === 'x' && r.data.description === 'y', 'frontmatter handles BOM + CRLF');
+}
+
 console.log(`ok - ${passed} smoke assertions passed`);

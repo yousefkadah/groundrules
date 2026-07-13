@@ -1,19 +1,21 @@
 'use strict';
 
-const { extractManaged } = require('../support/managedBlock');
-
 /**
  * Base render strategy for a tool adapter. Subclasses decide how the composed
- * `body` is turned into the file content, and how drift is detected.
+ * `body` becomes the file content.
  */
 class AdapterStrategy {
   /** @returns {string} the full file content to write. */
   // eslint-disable-next-line no-unused-vars
   render(body, existing) { throw new Error('AdapterStrategy.render not implemented'); }
 
-  /** @returns {boolean} whether the on-disk `content` already matches `body`. */
+  /**
+   * Drift is defined uniformly across strategies: a file is in sync iff
+   * re-rendering it is a no-op. This guarantees `check` passes exactly when
+   * `generate` would change nothing.
+   */
   isInSync(content, body) {
-    return extractManaged(content) === body.trim();
+    return this.render(body, content) === content;
   }
 }
 

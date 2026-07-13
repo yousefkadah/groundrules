@@ -15,6 +15,7 @@ ${paint('bold', 'Commands')}
 
 ${paint('bold', 'Options')}
   --dry-run, -n     Show what would change, write nothing
+  --force           Overwrite existing .ai/ files (init is create-only by default)
   --tools=a,b       Limit adapters (agents,claude,cursor,copilot,gemini,windsurf)
   --all             Include non-default adapters (e.g. windsurf)
   --cwd=PATH        Run against another directory
@@ -30,8 +31,9 @@ ${paint('bold', 'Examples')}
 class Printer {
   /* eslint-disable no-console */
   plan(plan) {
-    const icon = { create: paint('green', '  +'), overwrite: paint('yellow', '  ~'), update: paint('yellow', '  ~'), unchanged: paint('dim', '  =') };
-    for (const p of plan) console.log(`${icon[p.action] || '  ?'} ${p.path}${p.action === 'unchanged' ? paint('dim', ' (unchanged)') : ''}`);
+    const icon = { create: paint('green', '  +'), overwrite: paint('yellow', '  ~'), update: paint('yellow', '  ~'), unchanged: paint('dim', '  ='), kept: paint('dim', '  ·') };
+    const suffix = { unchanged: paint('dim', ' (unchanged)'), kept: paint('dim', ' (kept — --force to overwrite)') };
+    for (const p of plan) console.log(`${icon[p.action] || '  ?'} ${p.path}${suffix[p.action] || ''}`);
   }
 
   recommends(list) {

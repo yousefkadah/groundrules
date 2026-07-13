@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('fs');
 const path = require('path');
 const { createApp } = require('../index');
 const Printer = require('./Printer');
@@ -8,19 +9,23 @@ const GenerateCommand = require('./commands/GenerateCommand');
 const CheckCommand = require('./commands/CheckCommand');
 const DetectCommand = require('./commands/DetectCommand');
 
-/** Parse argv into an options object. */
+const BOOL_FLAGS = { '--dry-run': 'dryRun', '-n': 'dryRun', '--yes': 'yes', '-y': 'yes', '--all': 'all', '--force': 'force' };
+
+/** Parse argv strictly — unknown options are an error, not silently ignored. */
 function parseArgs(argv) {
-  const args = { _: [], tools: null, dryRun: false, yes: false, all: false, cwd: process.cwd() };
+  const args = { _: [], tools: null, dryRun: false, yes: false, all: false, force: false, cwd: process.cwd() };
   for (const a of argv) {
-    if (a === '--dry-run' || a === '-n') args.dryRun = true;
-    else if (a === '--yes' || a === '-y') args.yes = true;
-    else if (a === '--all') args.all = true;
-    else if (a.startsWith('--tools=')) args.tools = a.slice(8).split(',').map((s) => s.trim()).filter(Boolean);
-    else if (a.startsWith('--cwd=')) args.cwd = path.resolve(a.slice(6));
-    else if (!a.startsWith('-')) args._.push(a);
+    if (a === '-h' || a === '--help') { args._.push('help'); continue; }
+    if (Object.prototype.hasOwnProperty.call(BOOL_FLAGS, a)) { args[BOOL_FLAGS[a]] = true; continue; }
+    if (a.startsWith('--tools=')) { args.tools = a.slice(8).split(',').map((s) => s.trim()).filter(Boolean); continue; }
+    if (a.startsWith('--cwd=')) { args.cwd = path.resolve(a.slice(6)); continue; }
+    if (a.startsWith('-')) throw new Error(`unknown option: ${a}`);
+    args._.push(a);
   }
   return args;
 }
+
+const NEEDS_CWD = new Set(['init', 'generate', 'check', 'detect']);
 
 /** The CLI controller: parses args and dispatches to a command. */
 class Cli {
@@ -39,22 +44,32 @@ class Cli {
     }
   }
 
+  fail(message) {
+    this.printer.error(message);
+    process.exit(1);
+  }
+
   run(argv) {
-    const args = parseArgs(argv);
+    let args;
+    try { args = parseArgs(argv); } catch (e) { this.printer.error('Error: ' + e.message); this.printer.help(); process.exit(1); return; }
+
     const name = args._[0];
-    if (!name || name === 'help' || name === '--help' || name === '-h') return this.printer.help();
+    if (!name || name === 'help') return this.printer.help();
+
+    const command = this.commandFor(name);
+    if (!command) { this.printer.error(`Unknown command: ${name}`); this.printer.help(); process.exit(1); return; }
+
+    if (NEEDS_CWD.has(name)) {
+      let isDir = false;
+      try { isDir = fs.statSync(args.cwd).isDirectory(); } catch { isDir = false; }
+      if (!isDir) return this.fail(`--cwd is not an existing directory: ${args.cwd}`);
+    }
+
     try {
-      const command = this.commandFor(name);
-      if (!command) {
-        this.printer.error(`Unknown command: ${name}`);
-        this.printer.help();
-        process.exit(1);
-        return undefined;
-      }
       return command.run(args);
     } catch (e) {
       this.printer.error('Error: ' + (e && e.message ? e.message : String(e)));
-      return process.exit(1);
+      process.exit(1);
     }
   }
 }
