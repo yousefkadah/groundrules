@@ -12,9 +12,10 @@ tells agents "«One paragraph — what this project does»", which is worse than
 `groundrules generate`.
 
 ## 1. Scan (read-only)
-- [ ] Confirm the stack from manifests and `.ai/.groundrules.json`. Note framework(s), the real **test
-      runner** (Pest vs PHPUnit, Vitest/Jest, pytest…), build tooling, and the **static-analysis gate**
-      (phpstan/psalm/eslint) from `composer.json`/`package.json` scripts and CI.
+- [ ] Confirm the stack from the project's manifests (`composer.json` / `package.json` / `pyproject.toml`
+      / `go.mod` / `Cargo.toml` / `Gemfile` / `*.csproj`) and `.ai/.groundrules.json`. Note framework(s),
+      the real **test runner**, build tooling, and the **lint / type / static gate** from the project's
+      own scripts and CI — don't assume a PHP/JS toolchain.
 - [ ] **Reconcile the repo's own convention docs** — `README`, `CONTRIBUTING`, `docs/`, ADRs,
       `.github/*instructions*`, `.cursor/rules`, existing `CLAUDE.md`/`AGENTS.md`. Reuse the repo's own
       architecture terms; don't re-derive them.

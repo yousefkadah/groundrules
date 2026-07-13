@@ -21,7 +21,9 @@ it exposes — back to the human; report a short, **redacted** summary only if i
 **non-destructive checks** — formatter, linter, type checker, test suite — **provided you've glanced at
 what they actually run**. `composer test` / `npm test` / a git hook **executes repo-controlled code**:
 if a script, test bootstrap, or hook is newly added, changed in this task, or looks suspicious, treat it
-as needing approval, and don't run project scripts with production secrets or network they don't need.
+as needing approval. Run them **without production credentials, with network off by default, and against
+a disposable database** — test collection, fixtures, and hooks (e.g. `conftest.py`, test bootstraps) can
+execute arbitrary code; if you can't contain them that way, running them needs approval.
 **Ask first** before anything destructive, privileged, external, or out of scope: shell beyond those
 checks, `git push` / history rewrite, deleting or moving files outside the task, migrations or seeders
 against real data, any network send (HTTP POST, email, webhook, message), or changes to config,

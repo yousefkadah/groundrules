@@ -20,8 +20,9 @@ template, or `eval`; parameterized/escaped/allow-listed? Path traversal on user 
 user-supplied URL?
 
 **AuthZ / access** — every new endpoint checks authN **and** authZ (not just "logged in")? **IDOR**:
-nested resources authorized through the owning parent, and route-model binding scoped? No **mass
-assignment** (`$request->all()` → `create/update/fill`, missing `$fillable`/`$guarded`)?
+nested resources authorized through the owning parent, and object/route binding scoped to the actor? No
+**mass assignment / over-posting** — untrusted request fields written straight to a model/record
+without an allow-list?
 
 **Secrets** — any key/token/password/PII in the diff, logs, errors, or a URL? Read from config/env, not
 hard-coded? Nothing secret sent to a third party / LLM / log?
@@ -40,7 +41,7 @@ HTML)? Sanitize server-side, allow-list URL schemes (no `javascript:`), and test
 
 **Auth & sessions** — login/reset/verify flows rate-limited and non-enumerable? Token/session expiry,
 revocation, and rotation? Session fixation prevented on privilege change? MFA and account-recovery paths
-safe? (Check Fortify / Sanctum / Socialite / 2FA / WebAuthn where present.)
+safe? (Use the framework's own auth primitives, not home-rolled ones.)
 
 **Data handling** — unsafe deserialization of untrusted data? Unbounded input (zip bombs, huge payloads)?
 

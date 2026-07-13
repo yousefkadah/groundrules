@@ -8,16 +8,17 @@ description: Use when adding or changing a database migration or schema — new 
 Schema changes are the easiest way to cause an outage or data loss. Be conservative.
 
 ## Portability & correctness
-- [ ] Use the framework's schema builder (not raw engine-specific SQL) so it works on every engine the
-      project supports — SQLite/MySQL/PostgreSQL differ on enums, JSON, and altering columns. If CI runs
-      multiple engines, the migration must pass on all of them.
+- [ ] Use the project's **migration tool** (schema builder / migration DSL / versioned SQL — whatever the
+      repo uses), not ad-hoc DDL, so it works on every engine the project supports (they differ on enums,
+      JSON, and altering columns). If CI runs multiple engines, the migration must pass on all of them.
 - [ ] The schema builder does **not** guarantee a lock-free change: adding an index / FK / `NOT NULL` /
       default can **rewrite or lock a large table**. Assess the **production engine's** locking and use
       an online strategy (concurrent index, batched change, or a tool like pt-osc/gh-ost) where a
       table rewrite would cause downtime.
 - [ ] Add the right **indexes and foreign keys**; name constraints explicitly. Choose column types and
       sizes deliberately (money, ids, timestamps with timezone semantics).
-- [ ] Provide a real **`down()`** (or document why it's irreversible). Prefer reversible changes.
+- [ ] Provide a **reversible migration** (a down/rollback in whatever migration tool the repo uses) **or**
+      a documented forward-fix if it's genuinely irreversible. Prefer reversible.
 
 ## Zero-downtime (expand → migrate → contract)
 - [ ] **Expand:** add new nullable columns/tables first; deploy code that writes both old and new.

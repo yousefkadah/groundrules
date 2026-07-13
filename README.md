@@ -1,3 +1,5 @@
+<img src="assets/logo.svg" width="76" align="left" alt="Groundrules logo" />
+
 # Groundrules
 
 **One source of truth for AI coding agents.** Detect your stack, scaffold engineering standards +
@@ -116,6 +118,24 @@ into your repo's `.github/workflows/` to fail a PR when `.ai/` changed but the a
 - Single Go binary via `brew` / `uvx` (engine port; the content packs are the product — `npx` already works today).
 - A `--all` set of long-tail adapters (Windsurf, Cline, Junie, Aider).
 - More stack packs — contributions welcome.
+
+## Architecture
+
+Groundrules is a small, layered codebase (zero runtime dependencies) — not one big file:
+
+```
+src/
+├── cli/            controller + commands (init · generate · check · detect) + Printer
+├── services/       orchestration: detection · composition · writer · body · generator · drift
+├── detectors/      one StackDetector strategy per stack (Laravel, Vue, Python, Go, …)
+├── strategies/     adapter render strategies (inline · @import · Cursor .mdc)
+├── models/         Pack · Skill · Section · Adapter · DetectionResult · CanonicalSource
+├── config/         section order + adapter registry (data, not code)
+└── support/        fs · ansi · frontmatter · managed-block helpers
+```
+
+The content packs in `packs/` are the product; the engine above is deliberately thin and testable
+(`node test/smoke.js`).
 
 ## Status
 

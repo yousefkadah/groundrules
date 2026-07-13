@@ -22,13 +22,15 @@ juggling, webhook plumbing, and silent breakage when the provider changes. Work 
 - [ ] Reference secrets by name, never inline; add empty example keys only.
 
 ## 3. Scaffold (propose the diff; wait for approval)
-- [ ] A typed **client/service** using the stack's HTTP client with an explicit **timeout** + retry policy.
+- [ ] A typed **client/service** using the stack's HTTP client with an explicit **timeout**; retry only
+      **idempotent/safe** requests (or ones with an idempotency key) with bounded backoff — never blindly
+      retry a non-idempotent POST.
 - [ ] Typed request/response **DTOs** — no raw maps flowing around.
 - [ ] **Webhooks:** verify the signature first, dedupe by the provider's event id, respond fast (queue the work).
 - [ ] Push slow/external calls to background jobs. Map provider errors to your own error type — never leak a raw provider error to the UI.
 
 ## 4. Test against reality
-- [ ] Save **real sandbox payloads/files** as fixtures. Test the happy path *and* malformed input,
+- [ ] Save **sanitized/synthetic** fixtures (strip real PII, credentials, signatures, stable ids). Test the happy path *and* malformed input,
       timeouts, signature failures, and duplicate delivery. For file formats, assert byte/schema-exact output.
 
 ## 5. Record it (the step everyone skips)
@@ -41,5 +43,5 @@ quirks/blockers, a **drift-watch source** (changelog / `releases.atom` URL), and
 > from its tracked state — is what turns this discipline into leverage.
 
 ## Definition of done
-Scaffold reviewed (not auto-committed) · creds separated, no secrets in the diff · tests against real
+Scaffold reviewed (not auto-committed) · creds separated, no secrets in the diff · tests against sanitized
 fixtures pass (including failures) · integration record written · self-reviewed against `.ai/code-review.md`.

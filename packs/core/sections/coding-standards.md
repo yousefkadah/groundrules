@@ -16,7 +16,8 @@ active stack pack — those win on any concrete detail (commands, idioms, file l
 - **Keep diffs tight.** No drive-by reformatting. Run the project's formatter/linter before finishing.
 - **Reference code as `path/to/file:line`** so humans can click straight to it.
 
-**Data correctness (get these wrong and data rots silently):**
+**Data correctness** — for code that actually handles this data (skip what doesn't apply — a library or
+CLI may need none of it):
 - **Money:** use the repo's money representation — a money library or integer minor units — **never
   floats**; keep currency explicit and round only at boundaries.
 - **Dates & time:** store instants in **UTC**, keep the user's timezone for display, model date-only

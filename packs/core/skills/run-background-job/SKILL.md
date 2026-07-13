@@ -8,7 +8,7 @@ description: Use when adding or changing a queued job, listener, or scheduled ta
 Queued work runs later, on another worker, possibly more than once. Design for that.
 
 ## Dispatch
-- [ ] Dispatch **after the DB transaction commits** (`afterCommit`) so the job never runs before its data exists.
+- [ ] Dispatch **after the DB transaction commits** (your framework's after-commit hook / transactional outbox) so the job never runs before its data exists.
 - [ ] Pass **ids, not whole models**; re-load inside the job. Keep payloads small and non-secret.
 
 ## Execute safely
@@ -18,7 +18,7 @@ Queued work runs later, on another worker, possibly more than once. Design for t
       **bounded retries with backoff**; decide what a final failure does.
 - [ ] **Re-establish tenant/user context inside the job** — don't assume the dispatcher's scope carries
       over. Re-authorize.
-- [ ] Handle **permanent failure** (`failed()` / dead-letter) so a bad job doesn't vanish silently.
+- [ ] Handle **permanent failure** (a dead-letter / failed-job path) so a bad job doesn't vanish silently. Know the queue's ack semantics on worker crash.
 
 ## Test
 - [ ] Test **dispatch** (fake the queue/bus; assert pushed with the right payload and `afterCommit`)
