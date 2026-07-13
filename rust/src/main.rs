@@ -331,6 +331,47 @@ fn render_adapter(kind: &str, body: &str, existing: &str) -> String {
     }
 }
 
+// ---------------------------- AI-policy guard -------------------------------
+
+/// Does this text declare an anti-AI / no-LLM contribution policy? (line-scoped
+/// to avoid false positives on repos that merely mention AI).
+fn has_ai_opt_out(text: &str) -> bool {
+    let neg = [
+        "not accepted", "not allowed", "not welcome", "not permitted", "forbidden",
+        "prohibited", "banned", "disallow", "will not", "won't", "do not accept", "don't accept",
+    ];
+    for raw in text.lines() {
+        let l = raw.to_lowercase();
+        if l.contains("no ai") || l.contains("no llm") {
+            return true;
+        }
+        let ai = l.contains("ai-generated") || l.contains("ai generated") || l.contains("ai contribution") || l.contains("llm") || l.contains(" ai ") || l.starts_with("ai ");
+        if ai && neg.iter().any(|n| l.contains(n)) {
+            return true;
+        }
+    }
+    false
+}
+
+/// Remove our managed block so we don't match on Groundrules' own wording.
+fn strip_managed(text: &str) -> String {
+    if let (Some(s), Some(e)) = (text.find(MARK_START), text.find(MARK_END)) {
+        if e >= s {
+            let end = e + MARK_END.len();
+            return format!("{}{}", &text[..s], &text[end..]);
+        }
+    }
+    text.to_string()
+}
+
+fn detect_repo_ai_policy(cwd: &Path) -> Vec<String> {
+    ["AI_POLICY.md", "AI_POLICY", "AI_POLICY.txt", "CONTRIBUTING.md", ".github/CONTRIBUTING.md", "docs/AI_POLICY.md"]
+        .iter()
+        .filter(|f| fs::read_to_string(cwd.join(f)).map_or(false, |c| has_ai_opt_out(&c)))
+        .map(|f| f.to_string())
+        .collect()
+}
+
 // ------------------------------- body / build -------------------------------
 
 fn has_placeholders(cwd: &Path) -> bool {
@@ -483,6 +524,10 @@ fn generate(cwd: &Path, all: bool, tools: &Option<Vec<String>>, dry: bool) {
         }
         let target = cwd.join(rel);
         let existing = fs::read_to_string(&target).unwrap_or_default();
+        if !existing.is_empty() && has_ai_opt_out(&strip_managed(&existing)) {
+            println!("  \u{26a0} {} (skipped — repo AI policy)", rel);
+            continue;
+        }
         let next = render_adapter(kind, &body, &existing);
         let action = if existing.is_empty() {
             "+"
@@ -526,6 +571,9 @@ fn check(cwd: &Path, all: bool, tools: &Option<Vec<String>>) -> i32 {
             continue;
         }
         let content = fs::read_to_string(&target).unwrap_or_default();
+        if has_ai_opt_out(&strip_managed(&content)) {
+            continue; // repo's file forbids AI — we don't manage it
+        }
         if render_adapter(kind, &body, &content) != content {
             drift.push((rel.to_string(), "out of date".to_string()));
         }
@@ -580,6 +628,11 @@ fn cmd_init(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, dry
                 println!("    $ {}", inst);
             }
         }
+    }
+    let policy = detect_repo_ai_policy(cwd);
+    if !policy.is_empty() {
+        println!("\n\u{26a0} This repo appears to restrict AI contributions (see {}).", policy.join(", "));
+        println!("  Respect the repo's policy — prepare local changes for a human to review; don't open PRs/comments as if a person authored them.");
     }
     if has_placeholders(cwd) {
         println!("\n\u{26a0} .ai/context.md has \u{ab}placeholders\u{bb} — run the bootstrap skill in your agent to fill this project's real context.");
