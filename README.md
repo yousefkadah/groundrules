@@ -42,6 +42,9 @@ to ship with a generator. The value is the content in `packs/`, authored to staf
 npx @yousefkadah/groundrules init
 ```
 
+Prefer a **node-free single binary**? `brew install yousefkadah/tap/groundrules` (a standalone Rust
+build — no Node required). See [`rust/`](rust/).
+
 It detects your stack, writes `.ai/` + every agent's adapter, and prints stack recommendations. Then
 point your coding agent at the repo and run the **`bootstrap`** skill — it scans your codebase and fills
 in `.ai/context.md` + drafts project-specific skills. Edit `.ai/`, run `groundrules generate`, and every
