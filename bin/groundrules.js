@@ -43,7 +43,7 @@ function cmdDetect(args) {
 
 function cmdInit(args) {
   const d = lib.detect(args.cwd);
-  console.log(paint('bold', '\nagentstd init'));
+  console.log(paint('bold', '\ngroundrules init'));
   console.log(`  detected: ${d.stacks.length ? d.stacks.map((s) => paint('cyan', s)).join(' + ') : paint('dim', 'no known stack')} ${paint('dim', '[' + (d.signals.join(', ') || 'universal core only') + ']')}`);
   if (d.existingAgents.length) console.log(`  ${paint('dim', 'existing agent files: ' + d.existingAgents.join(', ') + ' (preserved — only managed blocks are touched)')}`);
 
@@ -62,13 +62,13 @@ function cmdInit(args) {
   console.log('\n' + paint('bold', 'Next:'));
   console.log(`  1. Open your coding agent (Claude Code / Codex / opencode) in this repo.`);
   console.log(`  2. Run the ${paint('cyan', 'bootstrap')} skill — it scans the project and fills in ${paint('cyan', '.ai/')} + drafts skills.`);
-  console.log(`  3. Edit ${paint('cyan', '.ai/')}, then ${paint('green', 'agentstd generate')} to re-sync every agent's rules file.`);
+  console.log(`  3. Edit ${paint('cyan', '.ai/')}, then ${paint('green', 'groundrules generate')} to re-sync every agent's rules file.`);
   if (args.dryRun) console.log('\n' + paint('yellow', 'Dry run — nothing was written. Re-run without --dry-run to apply.'));
 }
 
 function cmdGenerate(args) {
   if (!lib.exists(path.join(args.cwd, '.ai'))) {
-    console.error(paint('red', 'No .ai/ found. Run `agentstd init` first.'));
+    console.error(paint('red', 'No .ai/ found. Run `groundrules init` first.'));
     process.exit(1);
   }
   const plan = lib.emit(args.cwd, { dryRun: args.dryRun, tools: args.tools, all: args.all });
@@ -79,15 +79,15 @@ function cmdGenerate(args) {
 function cmdCheck(args) {
   const drift = lib.check(args.cwd, { tools: args.tools, all: args.all });
   if (!drift.length) { console.log(paint('green', '✓ adapters are in sync with .ai/')); return; }
-  console.log(paint('red', '✗ adapters are out of date — run `agentstd generate`:'));
+  console.log(paint('red', '✗ adapters are out of date — run `groundrules generate`:'));
   for (const d of drift) console.log(`  ${paint('red', '•')} ${d.path} ${paint('dim', '(' + d.reason + ')')}`);
   process.exit(1);
 }
 
-const HELP = `${paint('bold', 'agentstd')} — one source of truth for AI coding agents
+const HELP = `${paint('bold', 'groundrules')} — one source of truth for AI coding agents
 
 ${paint('bold', 'Usage')}
-  agentstd <command> [options]
+  groundrules <command> [options]
 
 ${paint('bold', 'Commands')}
   init        Detect the stack, scaffold .ai/ (core + stack packs) and generate every agent's rules file
@@ -103,10 +103,10 @@ ${paint('bold', 'Options')}
   -y, --yes         Assume yes (non-interactive)
 
 ${paint('bold', 'Examples')}
-  npx agentstd init
-  agentstd init --dry-run
-  agentstd generate
-  agentstd check           ${paint('dim', '# in CI, gate on drift')}`;
+  npx groundrules init
+  groundrules init --dry-run
+  groundrules generate
+  groundrules check           ${paint('dim', '# in CI, gate on drift')}`;
 
 function main() {
   const args = parseArgs(process.argv.slice(2));

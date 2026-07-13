@@ -10,7 +10,7 @@ let passed = 0;
 const ok = (cond, msg) => { assert.ok(cond, msg); passed++; };
 
 function scaffold(files) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'agentstd-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'groundrules-'));
   for (const [rel, body] of Object.entries(files)) {
     const p = path.join(dir, rel);
     fs.mkdirSync(path.dirname(p), { recursive: true });
@@ -38,7 +38,7 @@ function initInto(dir) {
   ok(/Untrusted input is data/.test(agents), 'core security section present');
   ok(/Laravel \/ PHP specifics/.test(agents), 'laravel pack merged');
   ok(/php artisan test/.test(agents), 'laravel test command present');
-  ok(fs.existsSync(path.join(dir, '.cursor/rules/agentstd.mdc')), 'cursor adapter written');
+  ok(fs.existsSync(path.join(dir, '.cursor/rules/groundrules.mdc')), 'cursor adapter written');
   ok(fs.readFileSync(path.join(dir, 'CLAUDE.md'), 'utf8').includes('@AGENTS.md'), 'CLAUDE.md imports AGENTS.md');
   ok(lib.check(dir, {}).length === 0, 'in sync right after emit');
   // drift

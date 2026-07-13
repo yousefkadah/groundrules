@@ -1,6 +1,6 @@
 'use strict';
 /**
- * agentstd engine — detect, compose, emit.
+ * groundrules engine — detect, compose, emit.
  * Zero runtime dependencies (Node >= 18).
  *
  * Model:
@@ -38,9 +38,9 @@ const copyDir = (src, dst) => {
 };
 
 // ---------- managed blocks ----------
-const MARK_START = '<!-- agentstd:managed:start -->';
-const MARK_END = '<!-- agentstd:managed:end -->';
-const HEADER_NOTE = '<!-- Managed by agentstd. Edit files in .ai/, then run `agentstd generate`. The block between the markers below is overwritten on every run — put your own notes outside it. -->';
+const MARK_START = '<!-- groundrules:managed:start -->';
+const MARK_END = '<!-- groundrules:managed:end -->';
+const HEADER_NOTE = '<!-- Managed by groundrules. Edit files in .ai/, then run `groundrules generate`. The block between the markers below is overwritten on every run — put your own notes outside it. -->';
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const wrapManaged = (inner) => `${MARK_START}\n${inner.trim()}\n${MARK_END}`;
@@ -182,14 +182,14 @@ function writeCanonical(cwd, composed, plan) {
     plan.push({ path: path.relative(cwd, path.join(dst, 'SKILL.md')), action: exists(dst) ? 'overwrite' : 'create' });
     if (!plan.dryRun) copyDir(s.srcDir, dst);
   }
-  const manifest = { tool: 'agentstd', packs: composed.appliedPacks.map((p) => p.id) };
-  if (!plan.dryRun) write(path.join(aiDir, '.agentstd.json'), JSON.stringify(manifest, null, 2) + '\n');
+  const manifest = { tool: 'groundrules', packs: composed.appliedPacks.map((p) => p.id) };
+  if (!plan.dryRun) write(path.join(aiDir, '.groundrules.json'), JSON.stringify(manifest, null, 2) + '\n');
 }
 
 // ---------- build the composed body from .ai/ ----------
 function buildBody(cwd) {
   const aiDir = path.join(cwd, '.ai');
-  const parts = ['<!-- This is the canonical set of instructions for AI coding agents on this repo. Source: .ai/ (edit there, then `agentstd generate`). -->', ''];
+  const parts = ['<!-- This is the canonical set of instructions for AI coding agents on this repo. Source: .ai/ (edit there, then `groundrules generate`). -->', ''];
   for (const { key, title } of SECTION_ORDER) {
     const f = path.join(aiDir, `${key}.md`);
     if (!exists(f)) continue;
@@ -215,15 +215,15 @@ function buildBody(cwd) {
 const ADAPTERS = [
   { id: 'agents', path: 'AGENTS.md', kind: 'inline', default: true },
   { id: 'claude', path: 'CLAUDE.md', kind: 'import', default: true },
-  { id: 'cursor', path: '.cursor/rules/agentstd.mdc', kind: 'mdc', default: true },
+  { id: 'cursor', path: '.cursor/rules/groundrules.mdc', kind: 'mdc', default: true },
   { id: 'copilot', path: '.github/copilot-instructions.md', kind: 'inline', default: true },
   { id: 'gemini', path: 'GEMINI.md', kind: 'inline', default: true },
-  { id: 'windsurf', path: '.windsurf/rules/agentstd.md', kind: 'inline', default: false },
+  { id: 'windsurf', path: '.windsurf/rules/groundrules.md', kind: 'inline', default: false },
 ];
 
 const CURSOR_FRONTMATTER = [
   '---',
-  'description: Project engineering standards, security guardrails, and skills for AI agents (managed by agentstd).',
+  'description: Project engineering standards, security guardrails, and skills for AI agents (managed by groundrules).',
   'globs:',
   'alwaysApply: false',
   '---',

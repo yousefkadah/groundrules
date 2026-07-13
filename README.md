@@ -1,4 +1,4 @@
-# agentstd
+# groundrules
 
 **One source of truth for AI coding agents.** Detect your stack, scaffold engineering standards +
 skills, and generate every tool's rules file — `AGENTS.md`, `CLAUDE.md`, Cursor, Copilot, Gemini — from
@@ -13,7 +13,7 @@ one place, kept in sync.
 
 Every coding agent reads a different file — `CLAUDE.md`, `AGENTS.md`, `.cursor/rules/*.mdc`,
 `.github/copilot-instructions.md`, `GEMINI.md`. Maintaining them by hand means drift and duplication.
-`agentstd` keeps **one canonical source** (`.ai/`) and generates the rest, so your standards are written
+`groundrules` keeps **one canonical source** (`.ai/`) and generates the rest, so your standards are written
 once and every agent obeys the same rules.
 
 It's not "another rules generator" — it's a **curated, security-first standards library** that happens
@@ -23,24 +23,24 @@ to ship with a generator. The value is the content in `packs/`, authored to staf
 
 ```bash
 # from your project root
-npx agentstd init          # (after npm publish) — or, from a clone:
-node /path/to/agentstd/bin/agentstd.js init
+npx groundrules init          # (after npm publish) — or, from a clone:
+node /path/to/groundrules/bin/groundrules.js init
 
 # it detects your stack, writes .ai/ + every agent's adapter, and prints stack recommendations
 ```
 
 Then point your coding agent at the repo and run the **`bootstrap`** skill — it scans your codebase and
-fills in `.ai/context.md` + drafts project-specific skills. Edit `.ai/`, run `agentstd generate`, and
+fills in `.ai/context.md` + drafts project-specific skills. Edit `.ai/`, run `groundrules generate`, and
 every adapter re-syncs.
 
 ## Commands
 
 | Command | Does |
 |---|---|
-| `agentstd init` | Detect stack, scaffold `.ai/` (core + packs), generate all adapters, print recommendations |
-| `agentstd generate` | Re-generate every adapter from `.ai/` (idempotent; only managed blocks change) |
-| `agentstd check` | Exit 1 if any adapter is out of sync with `.ai/` — a **CI drift gate** |
-| `agentstd detect` | Print what would be detected, write nothing |
+| `groundrules init` | Detect stack, scaffold `.ai/` (core + packs), generate all adapters, print recommendations |
+| `groundrules generate` | Re-generate every adapter from `.ai/` (idempotent; only managed blocks change) |
+| `groundrules check` | Exit 1 if any adapter is out of sync with `.ai/` — a **CI drift gate** |
+| `groundrules detect` | Print what would be detected, write nothing |
 
 Flags: `--dry-run`, `--tools=agents,claude,cursor,copilot,gemini`, `--all`, `--cwd=PATH`.
 
@@ -52,7 +52,7 @@ Flags: `--dry-run`, `--tools=agents,claude,cursor,copilot,gemini`, `--all`, `--c
   skills/{bootstrap,security-review,add-integration,write-tests}/SKILL.md
 AGENTS.md                     # canonical rollup (the cross-tool standard)   ┐
 CLAUDE.md                     # @imports AGENTS.md                           │ generated,
-.cursor/rules/agentstd.mdc    # transformed frontmatter                      │ inside managed
+.cursor/rules/groundrules.mdc    # transformed frontmatter                      │ inside managed
 .github/copilot-instructions.md                                             │ markers — your
 GEMINI.md                                                                    │ own edits outside
 .claude/skills/*              # skills copied for lazy-loading                │ them survive
@@ -78,7 +78,7 @@ Adding a pack = a folder with `pack.json` + `sections/*.md` (+ optional `skills/
 ## Rides the ecosystem — doesn't fight it
 
 - **`AGENTS.md`** is the convergence standard (read by Codex, Cursor, Copilot, Windsurf, Gemini, Zed,
-  Junie, Aider… and Claude Code). agentstd makes it the canonical file and adapts the rest.
+  Junie, Aider… and Claude Code). groundrules makes it the canonical file and adapts the rest.
 - **Laravel Boost** stays the authority on Laravel *facts* — the Laravel pack recommends it and defers to it.
 - **Skills** use the open [`SKILL.md`](https://agentskills.io) standard.
 
@@ -86,7 +86,7 @@ Adding a pack = a folder with `pack.json` + `sections/*.md` (+ optional `skills/
 
 - Distribute as a single Go binary via `brew` / `uvx` / `npx` (engine port; the content packs are the product).
 - More stack packs (Rails, Rust, .NET) and a `--all` set of long-tail adapters (Windsurf, Cline, Junie, Aider).
-- `agentstd check` GitHub Action.
+- `groundrules check` GitHub Action.
 
 ## Status
 

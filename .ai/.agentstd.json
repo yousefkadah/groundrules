@@ -1,7 +1,0 @@
-{
-  "tool": "agentstd",
-  "packs": [
-    "core",
-    "node-ts"
-  ]
-}

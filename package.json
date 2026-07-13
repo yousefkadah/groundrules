@@ -1,9 +1,9 @@
 {
-  "name": "agentstd",
+  "name": "groundrules",
   "version": "0.1.0",
   "description": "One source of truth for AI coding agents — detect your stack, scaffold standards + skills, and generate every tool's rules file (AGENTS.md, CLAUDE.md, Cursor, Copilot, Gemini) from one place.",
   "bin": {
-    "agentstd": "bin/agentstd.js"
+    "groundrules": "bin/groundrules.js"
   },
   "type": "commonjs",
   "engines": {
