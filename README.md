@@ -6,6 +6,14 @@
 skills, and generate every tool's rules file — `AGENTS.md`, `CLAUDE.md`, Cursor, Copilot, Gemini — from
 one place, kept in sync.
 
+<p>
+  <a href="https://www.npmjs.com/package/@yousefkadah/groundrules"><img src="https://img.shields.io/npm/v/@yousefkadah/groundrules?color=4f46e5&label=npm" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/@yousefkadah/groundrules"><img src="https://img.shields.io/npm/dt/@yousefkadah/groundrules?color=4f46e5&label=downloads" alt="npm total downloads"></a>
+  <a href="https://github.com/yousefkadah/groundrules/actions/workflows/ci.yml"><img src="https://github.com/yousefkadah/groundrules/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/npm/l/@yousefkadah/groundrules?color=4f46e5" alt="license"></a>
+  <img src="https://img.shields.io/node/v/@yousefkadah/groundrules" alt="node version">
+</p>
+
 <p align="center">
   <img src="assets/hero.svg" alt="Groundrules: detect your stack → compose one .ai/ source (core + stack packs) → generate every agent's rules file, in sync" width="960">
 </p>
