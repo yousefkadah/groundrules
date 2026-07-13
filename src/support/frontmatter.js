@@ -11,7 +11,9 @@ function parseFrontmatter(md) {
   const data = {};
   for (const line of m[1].split(/\r?\n/)) {
     const mm = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
-    if (mm) data[mm[1]] = mm[2].replace(/^["']|["']$/g, '');
+    // trim, then strip a run of surrounding quotes — mirrors the Rust port's
+    // `v.trim().trim_matches('"').trim_matches('\'')` so the skills-index line is identical.
+    if (mm) data[mm[1]] = mm[2].trim().replace(/^"+|"+$/g, '').replace(/^'+|'+$/g, '');
   }
   return { data, body: m[2] };
 }

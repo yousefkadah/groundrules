@@ -2,10 +2,12 @@
 //!
 //! The content packs (packs/) are embedded into the binary at compile time via
 //! include_dir, so this is a self-contained executable: no Node, no network.
-//! Mirrors the JS engine's behavior (create-only .ai/, managed-block adapters,
-//! symlink-safe atomic writes, deterministic ordering).
+//! Mirrors the JS engine's behavior byte-for-byte (create-only .ai/, managed-block
+//! adapters, always-on + path-scoped rules, rule import, symlink-safe atomic
+//! writes, deterministic ordering).
 
 use include_dir::{include_dir, Dir, DirEntry};
+use std::collections::HashSet;
 use std::env;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -15,7 +17,11 @@ static PACKS: Dir = include_dir!("$CARGO_MANIFEST_DIR/../packs");
 const MARK_START: &str = "<!-- groundrules:managed:start -->";
 const MARK_END: &str = "<!-- groundrules:managed:end -->";
 const HEADER_NOTE: &str = "<!-- Managed by groundrules. Edit files in .ai/, then run `groundrules generate`. The block between the markers below is overwritten on every run — put your own notes outside it. -->";
-const BANNER: &str = "> \u{26a0} **UNCONFIGURED** — `.ai/context.md` still contains \u{ab}placeholders\u{bb}. Run the `bootstrap` skill so an agent fills in this project\u{2019}s real context, architecture, and commands. Until then, treat the stack-specific guidance below as generic defaults, not verified facts.";
+const CANON_COMMENT: &str = "<!-- This is the canonical set of instructions for AI coding agents on this repo. Source: .ai/ (edit there, then `groundrules generate`). -->";
+const BANNER: &str = "> ⚠ **UNCONFIGURED** — `.ai/context.md` still contains «placeholders». Run the `bootstrap` skill so an agent fills in this project’s real context, architecture, and commands. Until then, treat the stack-specific guidance below as generic defaults, not verified facts.";
+const DESC_ALWAYS: &str = "Project engineering standards, security guardrails, and skills for AI agents (always applied) — managed by groundrules.";
+const IMPORT_SENTENCE: &str = "This project uses [`AGENTS.md`](AGENTS.md) as the single source of truth for AI agent rules.";
+const IMPORT_INNER: &str = "This project uses [`AGENTS.md`](AGENTS.md) as the single source of truth for AI agent rules.\n\n@AGENTS.md";
 
 /// (key, title)
 const SECTIONS: &[(&str, &str)] = &[
@@ -64,6 +70,14 @@ fn pack_name(id: &str) -> String {
         .and_then(|v| v.as_str())
         .unwrap_or(id)
         .to_string()
+}
+
+fn pack_globs(id: &str) -> Vec<String> {
+    pack_meta(id)
+        .get("globs")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().filter_map(|g| g.as_str().map(|s| s.to_string())).collect())
+        .unwrap_or_default()
 }
 
 fn pack_skill_names(id: &str) -> Vec<String> {
@@ -257,6 +271,17 @@ fn safe_write(path: &Path, content: &str) {
     }
 }
 
+fn list_files(dir: &Path) -> Vec<String> {
+    let mut names = Vec::new();
+    if let Ok(rd) = fs::read_dir(dir) {
+        for e in rd.filter_map(|e| e.ok()) {
+            names.push(e.file_name().to_string_lossy().to_string());
+        }
+    }
+    names.sort();
+    names
+}
+
 fn copy_embedded_dir(src: &Dir, dst: &Path) {
     let _ = fs::create_dir_all(dst);
     for entry in src.entries() {
@@ -305,11 +330,16 @@ fn wrap_managed(inner: &str) -> String {
 
 fn upsert_managed(existing: &str, inner: &str) -> String {
     let block = wrap_managed(inner);
-    if let (Some(s), Some(e)) = (existing.find(MARK_START), existing.find(MARK_END)) {
-        if e >= s {
-            let end = e + MARK_END.len();
+    // Mirror the JS regex `MARK_START[\s\S]*?MARK_END`: both markers must be present,
+    // then replace the FIRST END that follows START. If an END only precedes START
+    // (no END after it), JS's .replace is a no-op — match that exactly.
+    if existing.contains(MARK_START) && existing.contains(MARK_END) {
+        let s = existing.find(MARK_START).unwrap();
+        if let Some(rel) = existing[s..].find(MARK_END) {
+            let end = s + rel + MARK_END.len();
             return format!("{}{}{}", &existing[..s], block, &existing[end..]);
         }
+        return existing.to_string();
     }
     if !existing.trim().is_empty() {
         return format!("{}\n\n{}\n", existing.trim_end(), block);
@@ -317,36 +347,46 @@ fn upsert_managed(existing: &str, inner: &str) -> String {
     format!("{}\n\n{}\n", HEADER_NOTE, block)
 }
 
-fn render_adapter(kind: &str, body: &str, existing: &str) -> String {
-    match kind {
-        "import" => upsert_managed(
-            existing,
-            "This project uses [`AGENTS.md`](AGENTS.md) as the single source of truth for AI agent rules.\n\n@AGENTS.md",
-        ),
-        "mdc" => {
-            let frontmatter = "---\ndescription: Project engineering standards, security guardrails, and skills for AI agents (managed by groundrules).\nglobs:\nalwaysApply: false\n---";
-            format!("{}\n\n{}\n\n{}\n", frontmatter, HEADER_NOTE, wrap_managed(body))
-        }
-        _ => upsert_managed(existing, body),
-    }
+fn cursor_mdc(body: &str, always: bool, globs: &[String], desc: &str) -> String {
+    let globs_line = if globs.is_empty() {
+        "globs:".to_string()
+    } else {
+        format!("globs: {}", globs.join(","))
+    };
+    let frontmatter = format!(
+        "---\ndescription: {}\n{}\nalwaysApply: {}\n---",
+        desc,
+        globs_line,
+        if always { "true" } else { "false" }
+    );
+    format!("{}\n\n{}\n\n{}\n", frontmatter, HEADER_NOTE, wrap_managed(body))
+}
+
+fn copilot_scoped(body: &str, apply_to: &str) -> String {
+    let frontmatter = format!("---\napplyTo: \"{}\"\n---", apply_to);
+    format!("{}\n\n{}\n\n{}\n", frontmatter, HEADER_NOTE, wrap_managed(body))
 }
 
 // ---------------------------- AI-policy guard -------------------------------
 
-/// Does this text declare an anti-AI / no-LLM contribution policy? (line-scoped
-/// to avoid false positives on repos that merely mention AI).
+/// Does this text declare an anti-AI / no-LLM contribution policy? Line-scoped
+/// substring rule — kept BYTE-IDENTICAL to the JS `hasAiOptOut` (aiPolicy.js):
+/// same AI-term list, same negation list, same ordering, so the two engines
+/// agree on every input (a divergence would flip the drift gate npx-vs-brew).
 fn has_ai_opt_out(text: &str) -> bool {
-    let neg = [
-        "not accepted", "not allowed", "not welcome", "not permitted", "forbidden",
-        "prohibited", "banned", "disallow", "will not", "won't", "do not accept", "don't accept",
+    let ai_terms = ["ai-generated", "ai generated", "ai contribution", "llm", " ai "];
+    let neg_terms = [
+        "not accepted", "not allowed", "not permitted", "not welcome",
+        "forbidden", "prohibited", "banned", "disallow", "rejected",
+        "do not use", "don't use", "do not submit", "don't submit",
     ];
-    for raw in text.lines() {
-        let l = raw.to_lowercase();
+    for raw in text.split('\n') {
+        let l = raw.trim_end_matches('\r').to_lowercase();
         if l.contains("no ai") || l.contains("no llm") {
             return true;
         }
-        let ai = l.contains("ai-generated") || l.contains("ai generated") || l.contains("ai contribution") || l.contains("llm") || l.contains(" ai ") || l.starts_with("ai ");
-        if ai && neg.iter().any(|n| l.contains(n)) {
+        let ai = l.starts_with("ai ") || ai_terms.iter().any(|t| l.contains(t));
+        if ai && neg_terms.iter().any(|n| l.contains(n)) {
             return true;
         }
     }
@@ -412,6 +452,31 @@ fn frontmatter(md: &str) -> (String, String) {
     (name, desc)
 }
 
+/// Body after a leading `--- … ---` frontmatter block (or the whole text if none).
+fn strip_frontmatter(md: &str) -> String {
+    let text = md.strip_prefix('\u{feff}').unwrap_or(md);
+    if !text.starts_with("---") {
+        return text.to_string();
+    }
+    let nl = match text.find('\n') {
+        Some(i) => i,
+        None => return text.to_string(),
+    };
+    if text[..nl].trim_end_matches('\r') != "---" {
+        return text.to_string();
+    }
+    let after_open = &text[nl + 1..];
+    if let Some(rel) = after_open.find("\n---") {
+        // Mirror the JS regex `\n---\r?\n?`: consume exactly the 3 closing dashes plus
+        // an optional single CR/LF; any extra chars on the close line fall into the body.
+        let mut body = &after_open[rel + 4..]; // skip "\n---" (4 ASCII bytes, boundary-safe)
+        if let Some(b) = body.strip_prefix('\r') { body = b; }
+        if let Some(b) = body.strip_prefix('\n') { body = b; }
+        return body.to_string();
+    }
+    text.to_string()
+}
+
 fn collapse_blank(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     let mut nl = 0;
@@ -442,35 +507,180 @@ fn disk_skill_names(cwd: &Path) -> Vec<String> {
     names
 }
 
-fn build_body(cwd: &Path) -> String {
-    let ai = cwd.join(".ai");
-    let mut parts: Vec<String> = vec![
-        "<!-- This is the canonical set of instructions for AI coding agents on this repo. Source: .ai/ (edit there, then `groundrules generate`). -->".to_string(),
-    ];
-    if has_placeholders(cwd) {
-        parts.push(BANNER.to_string());
+/// Split a composed section into (core head, per-pack tails) on the
+/// `### <PackName> specifics` markers. Mirrors src/support/sectionSplit.js.
+fn split_section(text: &str, pack_names: &[String]) -> (String, Vec<(String, String)>) {
+    let mut marks: Vec<(usize, usize, usize, String)> = Vec::new(); // (idx, nl_width, marker_len, name)
+    for name in pack_names {
+        let marker = format!("### {} specifics", name);
+        let needle = format!("\n{}", marker);
+        if let Some(idx) = text.find(&needle) {
+            marks.push((idx, 1, marker.len(), name.clone()));
+        } else if text.starts_with(&marker) {
+            marks.push((0, 0, marker.len(), name.clone())); // marker at start-of-string (empty core head)
+        }
     }
+    marks.sort_by_key(|m| m.0);
+    if marks.is_empty() {
+        return (text.trim().to_string(), Vec::new());
+    }
+    let head = text[..marks[0].0].trim().to_string();
+    let mut tails = Vec::new();
+    for i in 0..marks.len() {
+        let start = marks[i].0 + marks[i].1 + marks[i].2; // past "\n### <name> specifics"
+        let end = if i + 1 < marks.len() { marks[i + 1].0 } else { text.len() };
+        tails.push((marks[i].3.clone(), text[start..end].trim().to_string()));
+    }
+    (head, tails)
+}
+
+/// Applied stack packs from the .ai/ manifest: (id, display name, globs).
+fn applied_packs(cwd: &Path) -> Vec<(String, String, Vec<String>)> {
+    let manifest = fs::read_to_string(cwd.join(".ai").join(".groundrules.json"))
+        .ok()
+        .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+        .unwrap_or_else(|| serde_json::json!({}));
+    let mut out = Vec::new();
+    if let Some(ids) = manifest.get("packs").and_then(|v| v.as_array()) {
+        for id in ids.iter().filter_map(|v| v.as_str()) {
+            if id == "core" || !pack_exists(id) {
+                continue;
+            }
+            out.push((id.to_string(), pack_name(id), pack_globs(id)));
+        }
+    }
+    out
+}
+
+/// Ordered (title, trimmed text) for the section files that exist.
+fn read_sections(cwd: &Path) -> Vec<(String, String)> {
+    let ai = cwd.join(".ai");
+    let mut out = Vec::new();
     for (key, title) in SECTIONS {
         if let Ok(c) = fs::read_to_string(ai.join(format!("{}.md", key))) {
-            parts.push(format!("## {}\n\n{}", title, c.trim()));
+            out.push((title.to_string(), c.trim().to_string()));
         }
     }
+    out
+}
+
+fn skills_index_lines(cwd: &Path) -> Vec<String> {
     let names = disk_skill_names(cwd);
-    if !names.is_empty() {
-        let mut idx = String::from("## Skills\n\nLoad the matching skill when a task fits its description (full text in `.ai/skills/<name>/SKILL.md`, also copied to `.claude/skills/`).\n");
-        for name in &names {
-            if let Ok(c) = fs::read_to_string(ai.join("skills").join(name).join("SKILL.md")) {
-                let (n, d) = frontmatter(&c);
-                idx.push_str(&format!("\n- **{}** — {}", if n.is_empty() { name.clone() } else { n }, d));
-            }
-        }
-        parts.push(idx);
+    if names.is_empty() {
+        return Vec::new();
     }
-    let joined = parts.join("\n\n");
+    let ai = cwd.join(".ai");
+    let mut lines = vec![
+        "## Skills".to_string(),
+        String::new(),
+        "Load the matching skill when a task fits its description (full text in `.ai/skills/<name>/SKILL.md`, also copied to `.claude/skills/`).".to_string(),
+        String::new(),
+    ];
+    for name in &names {
+        if let Ok(c) = fs::read_to_string(ai.join("skills").join(name).join("SKILL.md")) {
+            let (n, d) = frontmatter(&c);
+            lines.push(format!("- **{}** — {}", if n.is_empty() { name.clone() } else { n }, d));
+        }
+    }
+    lines.push(String::new());
+    lines
+}
+
+/// Shared assembler for the main (always/full) bodies. Mirrors BodyBuilder._assembleMain.
+fn assemble_main(cwd: &Path, section_texts: &[(String, String)]) -> String {
+    let mut parts: Vec<String> = vec![CANON_COMMENT.to_string(), String::new()];
+    if has_placeholders(cwd) {
+        parts.push(BANNER.to_string());
+        parts.push(String::new());
+    }
+    for (title, text) in section_texts {
+        parts.push(format!("## {}", title));
+        parts.push(String::new());
+        parts.push(text.trim().to_string());
+        parts.push(String::new());
+    }
+    for line in skills_index_lines(cwd) {
+        parts.push(line);
+    }
+    let joined = parts.join("\n");
     format!("{}\n", collapse_blank(&joined).trim())
 }
 
-// ------------------------------- commands -----------------------------------
+/// FULL body: every section verbatim (core + stack specifics inline).
+fn build_body(cwd: &Path) -> String {
+    assemble_main(cwd, &read_sections(cwd))
+}
+
+/// ALWAYS body: universal rules only; each globbed pack's specifics are stripped out.
+fn build_always(cwd: &Path) -> String {
+    let packs = applied_packs(cwd);
+    if packs.is_empty() {
+        return build_body(cwd);
+    }
+    let names: Vec<String> = packs.iter().map(|(_, n, _)| n.clone()).collect();
+    let globbed: HashSet<String> = packs.iter().filter(|(_, _, g)| !g.is_empty()).map(|(_, n, _)| n.clone()).collect();
+    let section_texts: Vec<(String, String)> = read_sections(cwd)
+        .into_iter()
+        .map(|(title, text)| {
+            let (head, tails) = split_section(&text, &names);
+            let mut out = head;
+            for (name, tail) in tails {
+                if !globbed.contains(&name) && !tail.is_empty() {
+                    out = format!("{}\n\n### {} specifics\n\n{}", out.trim_end(), name, tail);
+                }
+            }
+            (title, out)
+        })
+        .collect();
+    assemble_main(cwd, &section_texts)
+}
+
+/// One stack pack's specifics, as a focused path-scoped body — or None if it adds nothing.
+fn build_pack(cwd: &Path, pack_id: &str) -> Option<String> {
+    let packs = applied_packs(cwd);
+    let names: Vec<String> = packs.iter().map(|(_, n, _)| n.clone()).collect();
+    let pack = packs.iter().find(|(id, _, _)| id == pack_id)?;
+    let pack_display = &pack.1;
+
+    let mut blocks: Vec<String> = Vec::new();
+    for (title, text) in read_sections(cwd) {
+        let (_, tails) = split_section(&text, &names);
+        if let Some((_, tail)) = tails.iter().find(|(n, _)| n == pack_display) {
+            if !tail.is_empty() {
+                blocks.push(format!("## {}", title));
+                blocks.push(String::new());
+                blocks.push(tail.trim().to_string());
+                blocks.push(String::new());
+            }
+        }
+    }
+    if blocks.is_empty() {
+        return None;
+    }
+    let mut all: Vec<String> = vec![
+        format!("# {} — stack-specific rules", pack_display),
+        String::new(),
+        "These auto-attach when you edit files matching this pack’s globs. General standards and skills live in the always-on rule.".to_string(),
+        String::new(),
+    ];
+    all.extend(blocks);
+    let joined = all.join("\n");
+    Some(format!("{}\n", collapse_blank(&joined).trim()))
+}
+
+// ------------------------------- targets ------------------------------------
+
+enum RenderKind {
+    ImportRef,
+    Inline(String),
+    Cursor { body: String, always: bool, globs: Vec<String>, desc: String },
+    CopilotScoped { body: String, apply_to: String },
+}
+
+struct Target {
+    path: String,
+    kind: RenderKind,
+}
 
 fn adapter_selected(id: &str, is_default: bool, all: bool, tools: &Option<Vec<String>>) -> bool {
     match tools {
@@ -478,6 +688,169 @@ fn adapter_selected(id: &str, is_default: bool, all: bool, tools: &Option<Vec<St
         None => is_default || all,
     }
 }
+
+fn render_target(kind: &RenderKind, existing: &str) -> String {
+    match kind {
+        RenderKind::ImportRef => upsert_managed(existing, IMPORT_INNER),
+        RenderKind::Inline(body) => upsert_managed(existing, body),
+        RenderKind::Cursor { body, always, globs, desc } => cursor_mdc(body, *always, globs, desc),
+        RenderKind::CopilotScoped { body, apply_to } => copilot_scoped(body, apply_to),
+    }
+}
+
+/// The concrete files to emit — Cursor + Copilot get an always-on main body plus
+/// one path-scoped file per applied stack; every other tool gets the full body.
+fn build_targets(cwd: &Path, all: bool, tools: &Option<Vec<String>>) -> Vec<Target> {
+    let full = build_body(cwd);
+    let always = build_always(cwd);
+    let mut out: Vec<Target> = Vec::new();
+
+    for (id, rel, _kind, is_default) in ADAPTERS {
+        if !adapter_selected(id, *is_default, all, tools) {
+            continue;
+        }
+        let kind = match *id {
+            "claude" => RenderKind::ImportRef,
+            "cursor" => RenderKind::Cursor { body: always.clone(), always: true, globs: vec![], desc: DESC_ALWAYS.to_string() },
+            "copilot" => RenderKind::Inline(always.clone()),
+            _ => RenderKind::Inline(full.clone()),
+        };
+        out.push(Target { path: rel.to_string(), kind });
+    }
+
+    let cursor_on = adapter_selected("cursor", true, all, tools);
+    let copilot_on = adapter_selected("copilot", true, all, tools);
+    if cursor_on || copilot_on {
+        for (id, name, globs) in applied_packs(cwd) {
+            if globs.is_empty() {
+                continue;
+            }
+            if let Some(body) = build_pack(cwd, &id) {
+                if cursor_on {
+                    out.push(Target {
+                        path: format!(".cursor/rules/groundrules-{}.mdc", id),
+                        kind: RenderKind::Cursor {
+                            body: body.clone(),
+                            always: false,
+                            globs: globs.clone(),
+                            desc: format!("{} stack rules (auto-attached to matching files) — managed by groundrules.", name),
+                        },
+                    });
+                }
+                if copilot_on {
+                    out.push(Target {
+                        path: format!(".github/instructions/groundrules-{}.instructions.md", id),
+                        kind: RenderKind::CopilotScoped { body: body.clone(), apply_to: globs.join(",") },
+                    });
+                }
+            }
+        }
+    }
+    out
+}
+
+// ------------------------------- rule import --------------------------------
+
+fn is_plumbing_line(line: &str) -> bool {
+    let t = line.trim();
+    t == HEADER_NOTE || t == CANON_COMMENT || t == IMPORT_SENTENCE || t == "@AGENTS.md" || t.starts_with("@import ")
+}
+
+fn extract_rules(content: &str) -> String {
+    let body = strip_frontmatter(&strip_managed(content));
+    let kept: Vec<&str> = body.lines().filter(|l| !is_plumbing_line(l)).collect();
+    collapse_blank(&kept.join("\n")).trim().to_string()
+}
+
+fn is_ours(name: &str) -> bool {
+    name == "groundrules.md" || name.starts_with("groundrules.") || name.starts_with("groundrules-")
+}
+
+/// Candidate source files in priority order: (rel path, is-adapter-target).
+fn import_candidates(cwd: &Path) -> Vec<(String, bool, bool)> {
+    // (path, target, legacy)
+    let mut list: Vec<(String, bool, bool)> = vec![
+        ("AGENTS.md".to_string(), true, false),
+        ("CLAUDE.md".to_string(), true, false),
+        (".cursorrules".to_string(), false, true),
+    ];
+    for f in list_files(&cwd.join(".cursor").join("rules")) {
+        if f.ends_with(".mdc") && !is_ours(&f) {
+            list.push((format!(".cursor/rules/{}", f), false, false));
+        }
+    }
+    list.push((".github/copilot-instructions.md".to_string(), true, false));
+    for f in list_files(&cwd.join(".github").join("instructions")) {
+        if f.ends_with(".md") && !is_ours(&f) {
+            list.push((format!(".github/instructions/{}", f), false, false));
+        }
+    }
+    list.push(("GEMINI.md".to_string(), true, false));
+    for f in list_files(&cwd.join(".windsurf").join("rules")) {
+        if f.ends_with(".md") && !is_ours(&f) {
+            list.push((format!(".windsurf/rules/{}", f), false, false));
+        }
+    }
+    list
+}
+
+struct Imported {
+    body: String,
+    labels: Vec<String>,
+    consumed: HashSet<String>,
+    superseded: Vec<String>,
+}
+
+fn collect_import(cwd: &Path) -> Option<Imported> {
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut blocks: Vec<String> = Vec::new();
+    let mut labels: Vec<String> = Vec::new();
+    let mut consumed: HashSet<String> = HashSet::new();
+    let mut superseded: Vec<String> = Vec::new();
+
+    for (rel, target, legacy) in import_candidates(cwd) {
+        let abs = cwd.join(&rel);
+        // Skip symlinks — never slurp a file pointing outside the repo (e.g. secrets)
+        // into the committed .ai/. Mirrors the write-path symlink guard.
+        if fs::symlink_metadata(&abs).map(|m| m.file_type().is_symlink()).unwrap_or(false) {
+            continue;
+        }
+        let content = match fs::read_to_string(&abs) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let text = extract_rules(&content);
+        if text.is_empty() {
+            continue;
+        }
+        let norm: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
+        if seen.contains(&norm) {
+            continue;
+        }
+        seen.insert(norm);
+        blocks.push(format!("### From `{}`\n\n{}", rel, text));
+        labels.push(rel.clone());
+        if target {
+            consumed.insert(rel.clone());
+        }
+        if legacy {
+            superseded.push(rel.clone());
+        }
+    }
+
+    if blocks.is_empty() {
+        return None;
+    }
+    let labels_md: Vec<String> = labels.iter().map(|l| format!("`{}`", l)).collect();
+    let banner = format!(
+        "> ⓘ Imported from {} when adopting groundrules. This is a raw starting point — run the **bootstrap** skill so an agent splits it into the right `.ai/` sections (coding-standards / security-policy / testing-policy) and drops anything stale.",
+        labels_md.join(", ")
+    );
+    let body = format!("{}\n\n{}", banner, blocks.join("\n\n")).trim().to_string() + "\n";
+    Some(Imported { body, labels, consumed, superseded })
+}
+
+// ------------------------------- write / gen --------------------------------
 
 fn write_canonical(cwd: &Path, c: &Composed, force: bool, dry: bool) {
     let ai = cwd.join(".ai");
@@ -516,28 +889,25 @@ fn write_canonical(cwd: &Path, c: &Composed, force: bool, dry: bool) {
     }
 }
 
-fn generate(cwd: &Path, all: bool, tools: &Option<Vec<String>>, dry: bool) {
-    let body = build_body(cwd);
-    for (id, rel, kind, is_default) in ADAPTERS {
-        if !adapter_selected(id, *is_default, all, tools) {
+fn generate(cwd: &Path, all: bool, tools: &Option<Vec<String>>, dry: bool, fresh: &HashSet<String>) {
+    for t in build_targets(cwd, all, tools) {
+        let target = cwd.join(&t.path);
+        let disk = fs::read_to_string(&target).unwrap_or_default();
+        if !disk.is_empty() && has_ai_opt_out(&strip_managed(&disk)) {
+            println!("  \u{26a0} {} (skipped — repo AI policy)", t.path);
             continue;
         }
-        let target = cwd.join(rel);
-        let existing = fs::read_to_string(&target).unwrap_or_default();
-        if !existing.is_empty() && has_ai_opt_out(&strip_managed(&existing)) {
-            println!("  \u{26a0} {} (skipped — repo AI policy)", rel);
-            continue;
-        }
-        let next = render_adapter(kind, &body, &existing);
-        let action = if existing.is_empty() {
+        let existing = if fresh.contains(&t.path) { String::new() } else { disk.clone() };
+        let next = render_target(&t.kind, &existing);
+        let action = if disk.is_empty() {
             "+"
-        } else if existing == next {
+        } else if disk == next {
             "="
         } else {
             "~"
         };
-        println!("  {} {}", action, rel);
-        if !dry && existing != next {
+        println!("  {} {}", action, t.path);
+        if !dry && disk != next {
             safe_write(&target, &next);
         }
     }
@@ -559,23 +929,19 @@ fn generate(cwd: &Path, all: bool, tools: &Option<Vec<String>>, dry: bool) {
 }
 
 fn check(cwd: &Path, all: bool, tools: &Option<Vec<String>>) -> i32 {
-    let body = build_body(cwd);
     let mut drift: Vec<(String, String)> = Vec::new();
-    for (id, rel, kind, is_default) in ADAPTERS {
-        if !adapter_selected(id, *is_default, all, tools) {
-            continue;
-        }
-        let target = cwd.join(rel);
+    for t in build_targets(cwd, all, tools) {
+        let target = cwd.join(&t.path);
         if !target.exists() {
-            drift.push((rel.to_string(), "missing".to_string()));
+            drift.push((t.path.clone(), "missing".to_string()));
             continue;
         }
         let content = fs::read_to_string(&target).unwrap_or_default();
         if has_ai_opt_out(&strip_managed(&content)) {
             continue; // repo's file forbids AI — we don't manage it
         }
-        if render_adapter(kind, &body, &content) != content {
-            drift.push((rel.to_string(), "out of date".to_string()));
+        if render_target(&t.kind, &content) != content {
+            drift.push((t.path.clone(), "out of date".to_string()));
         }
     }
     if drift.is_empty() {
@@ -587,6 +953,34 @@ fn check(cwd: &Path, all: bool, tools: &Option<Vec<String>>) -> i32 {
             println!("  \u{2022} {} ({})", p, r);
         }
         1
+    }
+}
+
+// ------------------------------- commands -----------------------------------
+
+fn print_recommends(c: &Composed) {
+    if c.recommends.is_empty() {
+        return;
+    }
+    println!("\nRecommended for your stack:");
+    for r in &c.recommends {
+        let name = r.get("name").and_then(|v| v.as_str()).unwrap_or("");
+        let pack = r.get("pack").and_then(|v| v.as_str()).unwrap_or("");
+        println!("  \u{25cf} {} ({})", name, pack);
+        if let Some(why) = r.get("why").and_then(|v| v.as_str()) {
+            println!("    {}", why);
+        }
+        if let Some(inst) = r.get("install").and_then(|v| v.as_str()) {
+            println!("    $ {}", inst);
+        }
+    }
+}
+
+fn print_ai_policy(cwd: &Path) {
+    let policy = detect_repo_ai_policy(cwd);
+    if !policy.is_empty() {
+        println!("\n\u{26a0} This repo appears to restrict AI contributions (see {}).", policy.join(", "));
+        println!("  Respect the repo's policy — prepare local changes for a human to review; don't open PRs/comments as if a person authored them.");
     }
 }
 
@@ -614,26 +1008,9 @@ fn cmd_init(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, dry
     println!("  packs applied: {}", c.applied.iter().map(|(_, n)| n.clone()).collect::<Vec<_>>().join(" \u{2192} "));
     println!("\n{}", if dry { "Would write:" } else { "Wrote:" });
     write_canonical(cwd, &c, force, dry);
-    generate(cwd, all, tools, dry);
-    if !c.recommends.is_empty() {
-        println!("\nRecommended for your stack:");
-        for r in &c.recommends {
-            let name = r.get("name").and_then(|v| v.as_str()).unwrap_or("");
-            let pack = r.get("pack").and_then(|v| v.as_str()).unwrap_or("");
-            println!("  \u{25cf} {} ({})", name, pack);
-            if let Some(why) = r.get("why").and_then(|v| v.as_str()) {
-                println!("    {}", why);
-            }
-            if let Some(inst) = r.get("install").and_then(|v| v.as_str()) {
-                println!("    $ {}", inst);
-            }
-        }
-    }
-    let policy = detect_repo_ai_policy(cwd);
-    if !policy.is_empty() {
-        println!("\n\u{26a0} This repo appears to restrict AI contributions (see {}).", policy.join(", "));
-        println!("  Respect the repo's policy — prepare local changes for a human to review; don't open PRs/comments as if a person authored them.");
-    }
+    generate(cwd, all, tools, dry, &HashSet::new());
+    print_recommends(&c);
+    print_ai_policy(cwd);
     if has_placeholders(cwd) {
         println!("\n\u{26a0} .ai/context.md has \u{ab}placeholders\u{bb} — run the bootstrap skill in your agent to fill this project's real context.");
     }
@@ -646,9 +1023,64 @@ fn cmd_init(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, dry
     }
 }
 
+fn cmd_import(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, dry: bool) {
+    let found = match collect_import(cwd) {
+        Some(f) => f,
+        None => {
+            println!("\nNo existing agent rules found to import.");
+            println!("  Looked for CLAUDE.md, AGENTS.md, .cursorrules, .cursor/rules/*.mdc, .github/copilot-instructions.md, GEMINI.md, .windsurf/rules/*.");
+            println!("  Run `groundrules init` to scaffold from scratch instead.");
+            return;
+        }
+    };
+
+    let context_exists = cwd.join(".ai").join("context.md").exists();
+    let apply = !context_exists || force;
+
+    let (stacks, _existing) = detect(cwd);
+    let ids: Vec<String> = stacks.iter().map(|(id, _)| id.clone()).collect();
+    let mut c = compose(&ids);
+    if apply {
+        if let Some(entry) = c.sections.iter_mut().find(|(k, _)| k == "context") {
+            entry.1 = found.body.clone();
+        }
+    }
+
+    println!("\ngroundrules import");
+    println!("  imported rules from: {}", found.labels.join(", "));
+    let det = if ids.is_empty() { "no known stack".to_string() } else { ids.join(" + ") };
+    let sigs: Vec<String> = stacks.iter().map(|(_, s)| s.clone()).collect();
+    println!("  detected: {} [{}]", det, if sigs.is_empty() { "universal core only".to_string() } else { sigs.join(", ") });
+    println!("  packs applied: {}", c.applied.iter().map(|(_, n)| n.clone()).collect::<Vec<_>>().join(" \u{2192} "));
+    println!("  your existing rules seed .ai/context.md — the bootstrap skill then sorts them into the right sections");
+
+    println!("\n{}", if dry { "Would write:" } else { "Wrote:" });
+    write_canonical(cwd, &c, force, dry);
+    let fresh: HashSet<String> = if apply { found.consumed.clone() } else { HashSet::new() };
+    generate(cwd, all, tools, dry, &fresh);
+    print_recommends(&c);
+
+    if !apply {
+        println!("\n\u{26a0} .ai/context.md already exists — your imported rules were NOT applied to it.");
+        println!("  Re-run `groundrules import --force` to replace it, or merge the imported rules in by hand.");
+    }
+    if !found.superseded.is_empty() {
+        println!("\nNote: {} is legacy — its rules now live in .ai/ and are re-emitted to the modern paths. Safe to delete once you've confirmed the new files.", found.superseded.join(", "));
+    }
+    print_ai_policy(cwd);
+
+    println!("\nNext:");
+    println!("  1. Open your coding agent (Claude Code / Codex / opencode) in this repo.");
+    println!("  2. Run the bootstrap skill — it splits your imported rules into the right .ai/ sections and fills any gaps.");
+    println!("  3. Edit .ai/, then `groundrules generate` to re-sync every agent's rules file.");
+    if dry {
+        println!("\nDry run — nothing was written.");
+    }
+}
+
 fn print_help() {
     println!(
-        "groundrules — one source of truth for AI coding agents\n\nUsage\n  groundrules <command> [options]\n\nCommands\n  init        Detect the stack, scaffold .ai/ and generate every agent's rules file\n  generate    Re-generate all adapters from .ai/ (idempotent)\n  check       Fail (exit 1) if any adapter is out of sync with .ai/\n  detect      Print what would be detected, without writing anything\n\nOptions\n  --dry-run, -n     Show what would change, write nothing\n  --force           Overwrite existing .ai/ files (init is create-only by default)\n  --tools=a,b       Limit adapters (agents,claude,cursor,copilot,gemini,windsurf)\n  --all             Include non-default adapters (e.g. windsurf)\n  --cwd=PATH        Run against another directory"
+        "groundrules — one source of truth for AI coding agents\n\nUsage\n  groundrules <command> [options]\n\nCommands\n  init        Detect the stack, scaffold .ai/ and generate every agent's rules file\n  import      Adopt existing rules (CLAUDE.md/.cursorrules/Copilot/Gemini…) into .ai/, then generate\n  generate    Re-generate all adapters from .ai/ (idempotent)\n  check       Fail (exit 1) if any adapter is out of sync with .ai/\n  detect      Print what would be detected, without writing anything\n\nOptions\n  --dry-run, -n     Show what would change, write nothing\n  --force           Overwrite existing .ai/ files (init is create-only by default)\n  --tools=a,b       Limit adapters (agents,claude,cursor,copilot,gemini,windsurf)\n  --all             Include non-default adapters (e.g. windsurf)\n  --cwd=PATH        Run against another directory"
     );
 }
 
@@ -699,13 +1131,14 @@ fn main() {
     match cmd.as_str() {
         "detect" => cmd_detect(&cwd),
         "init" => cmd_init(&cwd, all, &tools, force, dry),
+        "import" => cmd_import(&cwd, all, &tools, force, dry),
         "generate" | "gen" => {
             if !cwd.join(".ai").is_dir() {
                 eprintln!("No .ai/ found. Run `groundrules init` first.");
                 std::process::exit(1);
             }
             println!("{}", if dry { "Would regenerate:" } else { "Regenerated adapters from .ai/:" });
-            generate(&cwd, all, &tools, dry);
+            generate(&cwd, all, &tools, dry, &HashSet::new());
         }
         "check" => std::process::exit(check(&cwd, all, &tools)),
         other => {

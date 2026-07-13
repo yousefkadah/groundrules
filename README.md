@@ -50,6 +50,10 @@ point your coding agent at the repo and run the **`bootstrap`** skill — it sca
 in `.ai/context.md` + drafts project-specific skills. Edit `.ai/`, run `groundrules generate`, and every
 adapter re-syncs.
 
+**Already have a `CLAUDE.md` / `.cursorrules` / Copilot instructions?** Don't start over —
+`groundrules import` reads your existing agent rules into `.ai/`, layers the curated security-first packs
+on top, and generates every adapter. Your rules migrate in; the drift gate keeps them honest from then on.
+
 > The CLI is dumb and deterministic; **your agent supplies the intelligence** (the `bootstrap` scan), so
 > Groundrules never needs an API key of its own.
 
@@ -58,26 +62,43 @@ adapter re-syncs.
 | Command | Does |
 |---|---|
 | `groundrules init` | Detect stack, scaffold `.ai/` (core + packs), generate all adapters, print recommendations |
+| `groundrules import` | **Adopt existing rules** — pull `CLAUDE.md`/`.cursorrules`/Copilot/Gemini/Windsurf into `.ai/`, then generate |
 | `groundrules generate` | Re-generate every adapter from `.ai/` (idempotent; only managed blocks change) |
 | `groundrules check` | Exit 1 if any adapter is out of sync with `.ai/` — a **CI drift gate** |
 | `groundrules detect` | Print what would be detected, write nothing |
 
-Flags: `--dry-run`, `--tools=agents,claude,cursor,copilot,gemini`, `--all`, `--cwd=PATH`.
+Flags: `--dry-run`, `--force`, `--tools=agents,claude,cursor,copilot,gemini`, `--all`, `--cwd=PATH`.
 
 ## What it writes
 
 ```
-.ai/                             # ← the canonical source you edit
+.ai/                                  # ← the canonical source you edit
   context · coding-standards · testing-policy · security-policy · code-review · pr-policy · release-policy
   skills/{bootstrap,scaffold-project,security-review,add-integration,write-tests,add-database-change,run-background-job}/SKILL.md
-AGENTS.md                        # canonical rollup (the cross-tool standard)   ┐
-CLAUDE.md                        # @imports AGENTS.md                           │ generated,
-.cursor/rules/groundrules.mdc    # transformed frontmatter                      │ inside managed
-.github/copilot-instructions.md                                                │ markers — your
-GEMINI.md                                                                       │ own edits outside
-.claude/skills/*                 # skills copied for lazy-loading                │ them survive
-.github/pull_request_template.md                                               ┘
+AGENTS.md                             # canonical rollup, full body (the cross-tool standard)   ┐
+CLAUDE.md                             # @imports AGENTS.md                                      │
+GEMINI.md                             # full body                                              │ generated,
+.cursor/rules/groundrules.mdc         # always-on rule (alwaysApply:true)                       │ inside managed
+.cursor/rules/groundrules-<stack>.mdc # path-scoped rule (globs:) per detected stack            │ markers — your
+.github/copilot-instructions.md       # always-on, repo-wide                                    │ own edits
+.github/instructions/groundrules-<stack>.instructions.md  # path-scoped (applyTo:) per stack    │ outside them
+.claude/skills/*                      # skills copied for lazy-loading                          │ survive
+.github/pull_request_template.md                                                               ┘
 ```
+
+## Always-on security + path-scoped stack rules
+
+A security-first library is only useful if its rules actually load. Groundrules projects the same `.ai/`
+source into two tiers for the tools that support scoping:
+
+- **Always-on** (`.cursor/rules/groundrules.mdc` with `alwaysApply:true`; `.github/copilot-instructions.md`
+  repo-wide) — the universal rules **including the security guardrails** load every session, never skipped.
+- **Path-scoped** (`.cursor/rules/groundrules-<stack>.mdc` with `globs:`; `.github/instructions/*.instructions.md`
+  with `applyTo:`) — each stack's specifics auto-attach only when you edit files that stack governs
+  (`**/*.php`, `**/*.vue`, `**/*.py`, …), so the right idioms surface without bloating every prompt.
+
+`AGENTS.md`, `CLAUDE.md`, and `GEMINI.md` carry the **full** body inline (those tools don't do path
+globs). Every file lives inside managed markers and is drift-gated by `check`.
 
 ## How composition works
 
@@ -126,9 +147,11 @@ into your repo's `.github/workflows/` to fail a PR when `.ai/` changed but the a
 
 ## Roadmap
 
-- Single Go binary via `brew` / `uvx` (engine port; the content packs are the product — `npx` already works today).
-- A `--all` set of long-tail adapters (Windsurf, Cline, Junie, Aider).
-- More stack packs — contributions welcome.
+- ✅ **Node-free single binary** via `brew` (Rust port; byte-identical output to `npx`, drift-gated across both).
+- ✅ **Rule import** — adopt an existing `CLAUDE.md`/`.cursorrules`/Copilot/Gemini setup.
+- ✅ **Always-on + path-scoped rules** (Cursor `globs`/`alwaysApply`, Copilot `applyTo`).
+- A thin `groundrules.json` config file (pin targets, stack overrides, opt-outs) — flag-only today.
+- More stack packs and long-tail adapters (Windsurf shipping; Cline/Junie/Aider ride the `AGENTS.md` standard) — contributions welcome.
 
 ## Architecture
 

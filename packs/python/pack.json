@@ -2,6 +2,7 @@
   "id": "python",
   "name": "Python",
   "extends": "core",
+  "globs": ["**/*.py"],
   "description": "Typed Python idioms (ruff/black, type hints) and pytest. Recognizes Django (manage.py) and FastAPI.",
   "detect": "pyproject.toml / requirements.txt / manage.py present",
   "recommends": []

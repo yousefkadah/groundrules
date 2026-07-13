@@ -8,6 +8,7 @@ const InitCommand = require('./commands/InitCommand');
 const GenerateCommand = require('./commands/GenerateCommand');
 const CheckCommand = require('./commands/CheckCommand');
 const DetectCommand = require('./commands/DetectCommand');
+const ImportCommand = require('./commands/ImportCommand');
 
 const BOOL_FLAGS = { '--dry-run': 'dryRun', '-n': 'dryRun', '--yes': 'yes', '-y': 'yes', '--all': 'all', '--force': 'force' };
 
@@ -25,7 +26,7 @@ function parseArgs(argv) {
   return args;
 }
 
-const NEEDS_CWD = new Set(['init', 'generate', 'check', 'detect']);
+const NEEDS_CWD = new Set(['init', 'import', 'generate', 'check', 'detect']);
 
 /** The CLI controller: parses args and dispatches to a command. */
 class Cli {
@@ -37,6 +38,7 @@ class Cli {
   commandFor(name) {
     switch (name) {
       case 'init': return new InitCommand(this.app, this.printer);
+      case 'import': return new ImportCommand(this.app, this.printer);
       case 'generate': case 'gen': return new GenerateCommand(this.app, this.printer);
       case 'check': return new CheckCommand(this.app, this.printer);
       case 'detect': return new DetectCommand(this.app, this.printer);

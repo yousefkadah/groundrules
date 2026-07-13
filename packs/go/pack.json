@@ -2,6 +2,7 @@
   "id": "go",
   "name": "Go",
   "extends": "core",
+  "globs": ["**/*.go"],
   "description": "Idiomatic Go (gofmt, error wrapping, context) and the go test workflow.",
   "detect": "go.mod present",
   "recommends": []

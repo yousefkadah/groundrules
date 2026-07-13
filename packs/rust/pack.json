@@ -2,6 +2,7 @@
   "id": "rust",
   "name": "Rust",
   "extends": "core",
+  "globs": ["**/*.rs"],
   "description": "Idiomatic Rust (rustfmt, clippy, Result/? error handling) and the cargo test workflow.",
   "detect": "Cargo.toml present",
   "recommends": []

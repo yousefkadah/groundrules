@@ -2,6 +2,7 @@
   "id": "laravel-php",
   "name": "Laravel / PHP",
   "extends": "core",
+  "globs": ["**/*.php", "artisan", "**/*.blade.php"],
   "description": "PHP 8 + Laravel idioms, Pest testing, and the artisan/deploy commands. Recommends Laravel Boost so the agent gets version-aware docs + app introspection.",
   "detect": "composer.json requires laravel/framework, or an artisan file is present",
   "recommends": [

@@ -8,6 +8,7 @@ const CanonicalWriter = require('./services/CanonicalWriter');
 const BodyBuilder = require('./services/BodyBuilder');
 const AdapterGenerator = require('./services/AdapterGenerator');
 const DriftChecker = require('./services/DriftChecker');
+const ImportService = require('./services/ImportService');
 const { SECTION_ORDER } = require('./config/sections');
 const { ADAPTERS } = require('./config/adapters');
 
@@ -19,10 +20,11 @@ function createApp(packsDir = PACKS_DIR) {
   const detection = new StackDetectionService(packs);
   const composition = new CompositionService(packs);
   const writer = new CanonicalWriter();
-  const bodyBuilder = new BodyBuilder();
+  const bodyBuilder = new BodyBuilder(packsDir);
   const generator = new AdapterGenerator(bodyBuilder, packsDir);
   const checker = new DriftChecker(bodyBuilder, generator);
-  return { packsDir, packs, detection, composition, writer, bodyBuilder, generator, checker };
+  const importer = new ImportService();
+  return { packsDir, packs, detection, composition, writer, bodyBuilder, generator, checker, importer };
 }
 
 const defaultApp = createApp();
@@ -39,6 +41,7 @@ module.exports = {
   hasPlaceholders: (cwd) => defaultApp.bodyBuilder.hasPlaceholders(cwd),
   emit: (cwd, opts) => defaultApp.generator.generate(cwd, opts),
   check: (cwd, opts) => defaultApp.checker.check(cwd, opts),
+  importRules: (cwd) => defaultApp.importer.collect(cwd),
   detectRepoAiPolicy: (cwd) => require('./support/aiPolicy').detectRepoAiPolicy(cwd),
   hasAiOptOut: (text) => require('./support/aiPolicy').hasAiOptOut(text),
 };

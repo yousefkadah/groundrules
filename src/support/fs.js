@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const exists = (p) => { try { fs.accessSync(p); return true; } catch { return false; } };
+const isSymlink = (p) => { try { return fs.lstatSync(p).isSymbolicLink(); } catch { return false; } };
 const read = (p) => fs.readFileSync(p, 'utf8');
 const readJsonSafe = (p) => { try { return JSON.parse(read(p)); } catch { return null; } };
 const ensureDir = (p) => fs.mkdirSync(p, { recursive: true });
@@ -40,4 +41,4 @@ const copyDir = (src, dst) => {
   }
 };
 
-module.exports = { exists, read, readJsonSafe, ensureDir, write, listDirs, listFiles, copyDir };
+module.exports = { exists, isSymlink, read, readJsonSafe, ensureDir, write, listDirs, listFiles, copyDir };

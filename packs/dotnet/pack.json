@@ -2,6 +2,7 @@
   "id": "dotnet",
   "name": ".NET / C#",
   "extends": "core",
+  "globs": ["**/*.cs", "**/*.csproj"],
   "description": "Idiomatic C# (nullable refs, async all the way, DI) and the dotnet test workflow.",
   "detect": "*.sln / *.csproj / global.json present",
   "recommends": []

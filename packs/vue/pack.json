@@ -2,6 +2,7 @@
   "id": "vue",
   "name": "Vue / Inertia",
   "extends": "core",
+  "globs": ["**/*.vue"],
   "description": "Vue 3 (+ Inertia) conventions and the JS toolchain. Fires on vue / @inertiajs/vue3 without assuming TypeScript.",
   "detect": "package.json depends on vue / @inertiajs/vue3 / nuxt (TypeScript NOT required)",
   "recommends": []

@@ -9,6 +9,7 @@ ${paint('bold', 'Usage')}
 
 ${paint('bold', 'Commands')}
   init        Detect the stack, scaffold .ai/ (core + stack packs) and generate every agent's rules file
+  import      Adopt existing rules (CLAUDE.md/.cursorrules/Copilot/Gemini…) into .ai/, then generate
   generate    Re-generate all adapters from .ai/ (idempotent; only managed blocks change)
   check       Fail (exit 1) if any adapter is out of sync with .ai/  — use in CI
   detect      Print what would be detected, without writing anything
@@ -23,6 +24,7 @@ ${paint('bold', 'Options')}
 
 ${paint('bold', 'Examples')}
   npx @yousefkadah/groundrules init
+  npx @yousefkadah/groundrules import   ${paint('dim', '# already have a CLAUDE.md? adopt it')}
   groundrules init --dry-run
   groundrules generate
   groundrules check           ${paint('dim', '# in CI, gate on drift')}`;
@@ -58,6 +60,37 @@ class Printer {
     console.log(`  detected: ${d.stacks.length ? d.stacks.map((s) => paint('cyan', s)).join(' + ') : paint('dim', 'no known stack')} ${paint('dim', '[' + (d.signals.join(', ') || 'universal core only') + ']')}`);
     if (d.existingAgents.length) console.log(`  ${paint('dim', 'existing agent files: ' + d.existingAgents.join(', ') + ' (preserved — only managed blocks are touched)')}`);
     console.log(`  packs applied: ${canonical.appliedPacks.map((p) => paint('cyan', p.name)).join(' → ')}`);
+  }
+
+  importHeader(d, canonical, found) {
+    console.log(paint('bold', '\ngroundrules import'));
+    console.log(`  imported rules from: ${found.labels.map((l) => paint('cyan', l)).join(', ')}`);
+    console.log(`  detected: ${d.stacks.length ? d.stacks.map((s) => paint('cyan', s)).join(' + ') : paint('dim', 'no known stack')} ${paint('dim', '[' + (d.signals.join(', ') || 'universal core only') + ']')}`);
+    console.log(`  packs applied: ${canonical.appliedPacks.map((p) => paint('cyan', p.name)).join(' → ')}`);
+    console.log(`  ${paint('dim', 'your existing rules seed .ai/context.md — the bootstrap skill then sorts them into the right sections')}`);
+  }
+
+  importNothing() {
+    console.log(paint('yellow', '\nNo existing agent rules found to import.'));
+    console.log(paint('dim', '  Looked for CLAUDE.md, AGENTS.md, .cursorrules, .cursor/rules/*.mdc, .github/copilot-instructions.md, GEMINI.md, .windsurf/rules/*.'));
+    console.log(`  Run ${paint('green', 'groundrules init')} to scaffold from scratch instead.`);
+  }
+
+  importContextKept() {
+    console.log('\n' + paint('yellow', '⚠ .ai/context.md already exists — your imported rules were NOT applied to it.'));
+    console.log(paint('dim', '  Re-run `groundrules import --force` to replace it, or merge the imported rules in by hand.'));
+  }
+
+  importSuperseded(files) {
+    console.log('\n' + paint('dim', `Note: ${files.join(', ')} is legacy — its rules now live in .ai/ and are re-emitted to the modern paths. Safe to delete once you've confirmed the new files.`));
+  }
+
+  importNext(dryRun) {
+    console.log('\n' + paint('bold', 'Next:'));
+    console.log('  1. Open your coding agent (Claude Code / Codex / opencode) in this repo.');
+    console.log(`  2. Run the ${paint('cyan', 'bootstrap')} skill — it splits your imported rules into the right ${paint('cyan', '.ai/')} sections and fills any gaps.`);
+    console.log(`  3. Edit ${paint('cyan', '.ai/')}, then ${paint('green', 'groundrules generate')} to re-sync every agent's rules file.`);
+    if (dryRun) console.log('\n' + paint('yellow', 'Dry run — nothing was written. Re-run without --dry-run to apply.'));
   }
 
   wroteHeader(dryRun) { console.log('\n' + paint('bold', dryRun ? 'Would write:' : 'Wrote:')); }
