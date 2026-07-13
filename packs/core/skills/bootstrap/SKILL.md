@@ -33,7 +33,13 @@ tells agents "«One paragraph — what this project does»", which is worse than
 - [ ] For each recurring workflow visible in the repo, draft `.ai/skills/<name>/SKILL.md` using the
       existing skills as templates. For each existing integration, follow `add-integration`.
 
-## 4. Hand back
+## 4. Scaffold missing project files
+- [ ] Offer to run the `scaffold-project` skill to create any **missing supporting files** — PR/issue
+      templates, `CONTRIBUTING`, `.editorconfig`, a CI workflow, `.gitignore` — **matched to this project**.
+      **Detect and respect what already exists** (never overwrite; reconcile), and if the repo restricts AI
+      (`AI_POLICY.md` / `CONTRIBUTING` / `AGENTS.md` directive), stop and surface it instead.
+
+## 5. Hand back
 - [ ] Present filled files + drafted skills as a **diff for review**. No invented facts. No
       secret/key/token/`.env` value (see `.ai/security-policy.md`).
 - [ ] Tell the human to run `groundrules generate` so all adapters update.

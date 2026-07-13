@@ -69,7 +69,7 @@ Flags: `--dry-run`, `--tools=agents,claude,cursor,copilot,gemini`, `--all`, `--c
 ```
 .ai/                             # ← the canonical source you edit
   context · coding-standards · testing-policy · security-policy · code-review · pr-policy · release-policy
-  skills/{bootstrap,security-review,add-integration,write-tests,add-database-change,run-background-job}/SKILL.md
+  skills/{bootstrap,scaffold-project,security-review,add-integration,write-tests,add-database-change,run-background-job}/SKILL.md
 AGENTS.md                        # canonical rollup (the cross-tool standard)   ┐
 CLAUDE.md                        # @imports AGENTS.md                           │ generated,
 .cursor/rules/groundrules.mdc    # transformed frontmatter                      │ inside managed
