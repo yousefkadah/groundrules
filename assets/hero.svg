@@ -1,97 +1,176 @@
-<svg viewBox="0 0 1240 640" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
-  <rect x="0" y="0" width="1240" height="640" rx="0" fill="#F5F6FC"/>
+<svg viewBox="0 0 1240 760" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <!-- page -->
+  <rect x="0" y="0" width="1240" height="760" rx="0" fill="#F5F6FC"/>
 
   <!-- header -->
-  <text x="620" y="64" text-anchor="middle" font-size="44" font-weight="800" fill="#111827">Groundrules</text>
-  <path d="M812,42 L814,50 L822,52 L814,54 L812,62 L810,54 L802,52 L810,50 Z" fill="#6366F1"/>
-  <text x="620" y="98" text-anchor="middle" font-size="19" fill="#6B7280">One source of truth &#8594; every coding agent, in sync.</text>
-  <rect x="470" y="112" width="300" height="28" rx="14" fill="#EEF2FF" stroke="#C7D2FE" stroke-width="1"/>
-  <text x="620" y="130" text-anchor="middle" font-size="12.5" font-family="'SF Mono','Consolas',monospace" fill="#4F46E5">npx @yousefkadah/groundrules init</text>
+  <text x="620" y="66" text-anchor="middle" font-size="42" font-weight="800" fill="#111827">Groundrules</text>
+  <path d="M795,44 L797,52 L805,54 L797,56 L795,64 L793,56 L785,54 L793,52 Z" fill="#6366F1"/>
+  <path d="M812,58 L813,62 L817,63 L813,64 L812,68 L811,64 L807,63 L811,62 Z" fill="#A5B4FC"/>
+  <text x="620" y="98" text-anchor="middle" font-size="19" fill="#6B7280">One source of truth &#8594; every coding agent, guided by your standards.</text>
+  <rect x="478" y="112" width="284" height="26" rx="13" fill="#EEF2FF" stroke="#C7D2FE" stroke-width="1"/>
+  <text x="620" y="129" text-anchor="middle" font-size="13" font-family="'SF Mono','Consolas',monospace" fill="#4F46E5">npx @yousefkadah/groundrules init</text>
 
-  <!-- ===== Card 1: Detect ===== -->
-  <rect x="40" y="162" width="336" height="360" rx="18" fill="#E8EAF3"/>
-  <rect x="40" y="158" width="336" height="360" rx="18" fill="#FFFFFF" stroke="#E7E9F3" stroke-width="1.5"/>
-  <circle cx="72" cy="192" r="13" fill="#3B82F6"/>
-  <text x="72" y="197" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">1</text>
-  <text x="96" y="190" font-size="16.5" font-weight="700" fill="#1F2937">Detect the stack</text>
-  <text x="96" y="209" font-size="12.5" fill="#9CA3AF">from the repo's manifests</text>
+  <!-- ===================== LEFT CARD: file tree ===================== -->
+  <rect x="40" y="156" width="680" height="576" rx="20" fill="#E8EAF3"/>
+  <rect x="40" y="152" width="680" height="576" rx="20" fill="#FFFFFF" stroke="#E7E9F3" stroke-width="1.5"/>
+
+  <!-- trunk -->
+  <line x1="88" y1="206" x2="88" y2="658" stroke="#D9DCE8" stroke-width="1.6"/>
+  <line x1="88" y1="220" x2="106" y2="220" stroke="#D9DCE8" stroke-width="1.6"/>
+  <line x1="88" y1="246" x2="106" y2="246" stroke="#D9DCE8" stroke-width="1.6"/>
+  <line x1="88" y1="278" x2="106" y2="278" stroke="#D9DCE8" stroke-width="1.6"/>
+  <line x1="88" y1="480" x2="106" y2="480" stroke="#D9DCE8" stroke-width="1.6"/>
+  <line x1="88" y1="658" x2="106" y2="658" stroke="#D9DCE8" stroke-width="1.6"/>
+
+  <!-- root folder -->
+  <rect x="60" y="176" width="9" height="4" rx="1.5" fill="#60A5FA"/>
+  <rect x="60" y="179" width="22" height="15" rx="3" fill="#60A5FA"/>
+  <text x="96" y="196" font-size="16" font-weight="700" fill="#1F2937">your-project/</text>
+
+  <!-- CLAUDE.md -->
+  <rect x="111" y="206" width="15" height="19" rx="2.5" fill="#FFFFFF" stroke="#D5D8E4" stroke-width="1.2"/>
+  <path d="M121 206 l5 5 h-5 z" fill="#E7E9F3"/>
+  <rect x="114" y="218" width="8.5" height="1.7" rx="0.8" fill="#6366F1"/>
+  <text x="142" y="225" font-size="15" font-family="'SF Mono','Consolas',monospace" fill="#374151">CLAUDE.md</text>
+
+  <!-- AGENTS.md -->
+  <rect x="111" y="232" width="15" height="19" rx="2.5" fill="#FFFFFF" stroke="#D5D8E4" stroke-width="1.2"/>
+  <path d="M121 232 l5 5 h-5 z" fill="#E7E9F3"/>
+  <rect x="114" y="244" width="8.5" height="1.7" rx="0.8" fill="#6366F1"/>
+  <text x="142" y="251" font-size="15" font-family="'SF Mono','Consolas',monospace" fill="#374151">AGENTS.md</text>
+
+  <!-- .ai/ folder -->
+  <rect x="108" y="264" width="9" height="4" rx="1.5" fill="#34D399"/>
+  <rect x="108" y="267" width="22" height="15" rx="3" fill="#34D399"/>
+  <text x="142" y="283" font-size="15" font-weight="700" fill="#1F2937">.ai/</text>
+
+  <!-- .ai sub-trunk -->
+  <line x1="134" y1="294" x2="134" y2="450" stroke="#E0E2EC" stroke-width="1.4"/>
+  <line x1="134" y1="306" x2="150" y2="306" stroke="#E0E2EC" stroke-width="1.4"/>
+  <line x1="134" y1="330" x2="150" y2="330" stroke="#E0E2EC" stroke-width="1.4"/>
+  <line x1="134" y1="354" x2="150" y2="354" stroke="#E0E2EC" stroke-width="1.4"/>
+  <line x1="134" y1="378" x2="150" y2="378" stroke="#E0E2EC" stroke-width="1.4"/>
+  <line x1="134" y1="402" x2="150" y2="402" stroke="#E0E2EC" stroke-width="1.4"/>
+  <line x1="134" y1="426" x2="150" y2="426" stroke="#E0E2EC" stroke-width="1.4"/>
+  <line x1="134" y1="450" x2="150" y2="450" stroke="#E0E2EC" stroke-width="1.4"/>
+
+  <!-- .ai files -->
   <g font-size="14" font-family="'SF Mono','Consolas',monospace" fill="#4B5563">
-    <rect x="66" y="238" width="13" height="17" rx="2" fill="#FFFFFF" stroke="#D5D8E4" stroke-width="1.1"/><rect x="68" y="248" width="7" height="1.5" rx="0.7" fill="#60A5FA"/><text x="90" y="251">composer.json</text>
-    <rect x="66" y="266" width="13" height="17" rx="2" fill="#FFFFFF" stroke="#D5D8E4" stroke-width="1.1"/><rect x="68" y="276" width="7" height="1.5" rx="0.7" fill="#34D399"/><text x="90" y="279">package.json</text>
-    <rect x="66" y="294" width="13" height="17" rx="2" fill="#FFFFFF" stroke="#D5D8E4" stroke-width="1.1"/><rect x="68" y="304" width="7" height="1.5" rx="0.7" fill="#FBBF24"/><text x="90" y="307">pyproject.toml</text>
-    <rect x="66" y="322" width="13" height="17" rx="2" fill="#FFFFFF" stroke="#D5D8E4" stroke-width="1.1"/><rect x="68" y="332" width="7" height="1.5" rx="0.7" fill="#22D3EE"/><text x="90" y="335">go.mod</text>
-    <rect x="66" y="350" width="13" height="17" rx="2" fill="#FFFFFF" stroke="#D5D8E4" stroke-width="1.1"/><rect x="68" y="360" width="7" height="1.5" rx="0.7" fill="#F97316"/><text x="90" y="363">Cargo.toml</text>
-    <rect x="66" y="378" width="13" height="17" rx="2" fill="#FFFFFF" stroke="#D5D8E4" stroke-width="1.1"/><rect x="68" y="388" width="7" height="1.5" rx="0.7" fill="#A78BFA"/><text x="90" y="391">*.csproj / Gemfile</text>
+    <rect x="158" y="293" width="13" height="17" rx="2" fill="#FFFFFF" stroke="#DCE7E1" stroke-width="1.1"/><rect x="160" y="303" width="7" height="1.5" rx="0.7" fill="#34D399"/>
+    <text x="182" y="311">context.md</text>
+    <rect x="158" y="317" width="13" height="17" rx="2" fill="#FFFFFF" stroke="#DCE7E1" stroke-width="1.1"/><rect x="160" y="327" width="7" height="1.5" rx="0.7" fill="#34D399"/>
+    <text x="182" y="335">coding-standards.md</text>
+    <rect x="158" y="341" width="13" height="17" rx="2" fill="#FFFFFF" stroke="#DCE7E1" stroke-width="1.1"/><rect x="160" y="351" width="7" height="1.5" rx="0.7" fill="#34D399"/>
+    <text x="182" y="359">testing-policy.md</text>
+    <rect x="158" y="365" width="13" height="17" rx="2" fill="#FFFFFF" stroke="#DCE7E1" stroke-width="1.1"/><rect x="160" y="375" width="7" height="1.5" rx="0.7" fill="#34D399"/>
+    <text x="182" y="383">security-policy.md</text>
+    <rect x="158" y="389" width="13" height="17" rx="2" fill="#FFFFFF" stroke="#DCE7E1" stroke-width="1.1"/><rect x="160" y="399" width="7" height="1.5" rx="0.7" fill="#34D399"/>
+    <text x="182" y="407">code-review.md</text>
+    <rect x="158" y="413" width="13" height="17" rx="2" fill="#FFFFFF" stroke="#DCE7E1" stroke-width="1.1"/><rect x="160" y="423" width="7" height="1.5" rx="0.7" fill="#34D399"/>
+    <text x="182" y="431">pr-policy.md</text>
+    <rect x="158" y="437" width="13" height="17" rx="2" fill="#FFFFFF" stroke="#DCE7E1" stroke-width="1.1"/><rect x="160" y="447" width="7" height="1.5" rx="0.7" fill="#34D399"/>
+    <text x="182" y="455">release-policy.md</text>
   </g>
-  <text x="66" y="430" font-size="12.5" fill="#9CA3AF">…and detects agent files</text>
-  <text x="66" y="448" font-size="12.5" fill="#9CA3AF">already in the repo (preserved).</text>
 
-  <!-- arrow 1 -->
-  <text x="414" y="330" text-anchor="middle" font-size="12" font-weight="600" fill="#6366F1">detect</text>
-  <path d="M382 344 H448" stroke="#C7CBDA" stroke-width="2.5" stroke-linecap="round"/>
-  <path d="M441 337 L450 344 L441 351" fill="none" stroke="#C7CBDA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- skills/ folder -->
+  <rect x="108" y="466" width="9" height="4" rx="1.5" fill="#FBBF24"/>
+  <rect x="108" y="469" width="22" height="15" rx="3" fill="#FBBF24"/>
+  <text x="142" y="485" font-size="15" font-weight="700" fill="#1F2937">skills/</text>
 
-  <!-- ===== Card 2: Compose (.ai/) ===== -->
-  <rect x="452" y="162" width="336" height="360" rx="18" fill="#E8EAF3"/>
-  <rect x="452" y="158" width="336" height="360" rx="18" fill="#FFFFFF" stroke="#E7E9F3" stroke-width="1.5"/>
-  <circle cx="484" cy="192" r="13" fill="#10B981"/>
-  <text x="484" y="197" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">2</text>
-  <text x="508" y="190" font-size="16.5" font-weight="700" fill="#1F2937">Compose to .ai/</text>
-  <text x="508" y="209" font-size="12.5" fill="#9CA3AF">one editable source of truth</text>
+  <!-- skills sub-trunk -->
+  <line x1="134" y1="496" x2="134" y2="628" stroke="#E0E2EC" stroke-width="1.4"/>
+  <line x1="134" y1="508" x2="150" y2="508" stroke="#E0E2EC" stroke-width="1.4"/>
+  <line x1="134" y1="532" x2="150" y2="532" stroke="#E0E2EC" stroke-width="1.4"/>
+  <line x1="134" y1="556" x2="150" y2="556" stroke="#E0E2EC" stroke-width="1.4"/>
+  <line x1="134" y1="580" x2="150" y2="580" stroke="#E0E2EC" stroke-width="1.4"/>
+  <line x1="134" y1="604" x2="150" y2="604" stroke="#E0E2EC" stroke-width="1.4"/>
+  <line x1="134" y1="628" x2="150" y2="628" stroke="#E0E2EC" stroke-width="1.4"/>
 
-  <text x="478" y="240" font-size="12" font-weight="700" fill="#047857" letter-spacing="0.5">SECTIONS</text>
-  <text x="478" y="259" font-size="12.5" fill="#4B5563">security · testing · coding-standards</text>
-  <text x="478" y="276" font-size="12.5" fill="#4B5563">code-review · pr · release</text>
-  <text x="478" y="304" font-size="12" font-weight="700" fill="#047857" letter-spacing="0.5">SKILLS</text>
-  <text x="478" y="323" font-size="12.5" fill="#4B5563">bootstrap · security-review</text>
-  <text x="478" y="340" font-size="12.5" fill="#4B5563">add-integration · run-background-job …</text>
-
-  <text x="478" y="368" font-size="12" font-weight="700" fill="#B45309" letter-spacing="0.5">CORE + YOUR STACK PACKS</text>
-  <g font-size="11.5" font-weight="600">
-    <rect x="478" y="378" width="46" height="22" rx="11" fill="#EEF2FF" stroke="#C7D2FE"/><text x="501" y="393" text-anchor="middle" fill="#4F46E5">core</text>
-    <rect x="530" y="378" width="60" height="22" rx="11" fill="#F3F4FB" stroke="#E2E4F0"/><text x="560" y="393" text-anchor="middle" fill="#374151">laravel</text>
-    <rect x="596" y="378" width="42" height="22" rx="11" fill="#F3F4FB" stroke="#E2E4F0"/><text x="617" y="393" text-anchor="middle" fill="#374151">vue</text>
-    <rect x="644" y="378" width="66" height="22" rx="11" fill="#F3F4FB" stroke="#E2E4F0"/><text x="677" y="393" text-anchor="middle" fill="#374151">node-ts</text>
-    <rect x="716" y="378" width="52" height="22" rx="11" fill="#F3F4FB" stroke="#E2E4F0"/><text x="742" y="393" text-anchor="middle" fill="#374151">python</text>
-    <rect x="478" y="406" width="36" height="22" rx="11" fill="#F3F4FB" stroke="#E2E4F0"/><text x="496" y="421" text-anchor="middle" fill="#374151">go</text>
-    <rect x="520" y="406" width="48" height="22" rx="11" fill="#F3F4FB" stroke="#E2E4F0"/><text x="544" y="421" text-anchor="middle" fill="#374151">rails</text>
-    <rect x="574" y="406" width="42" height="22" rx="11" fill="#F3F4FB" stroke="#E2E4F0"/><text x="595" y="421" text-anchor="middle" fill="#374151">rust</text>
-    <rect x="622" y="406" width="46" height="22" rx="11" fill="#F3F4FB" stroke="#E2E4F0"/><text x="645" y="421" text-anchor="middle" fill="#374151">.NET</text>
+  <!-- skills entries (folders) -->
+  <g font-size="14" font-family="'SF Mono','Consolas',monospace" fill="#4B5563">
+    <rect x="156" y="500" width="8" height="3.2" rx="1" fill="#FCD34D"/><rect x="156" y="502.5" width="16" height="11" rx="2.2" fill="#FCD34D"/>
+    <text x="182" y="513">bootstrap/</text>
+    <path d="M296,504 L297.7,505.7 L302,506 L297.7,507.3 L297,512 L295.3,507.3 L291,506 L295.3,505.7 Z" fill="#F59E0B"/>
+    <rect x="156" y="524" width="8" height="3.2" rx="1" fill="#FCD34D"/><rect x="156" y="526.5" width="16" height="11" rx="2.2" fill="#FCD34D"/>
+    <text x="182" y="537">add-integration/</text>
+    <path d="M342,528 L343.7,529.7 L348,530 L343.7,531.3 L343,536 L341.3,531.3 L337,530 L341.3,529.7 Z" fill="#F59E0B"/>
+    <rect x="156" y="548" width="8" height="3.2" rx="1" fill="#FCD34D"/><rect x="156" y="550.5" width="16" height="11" rx="2.2" fill="#FCD34D"/>
+    <text x="182" y="561">security-review/</text>
+    <rect x="156" y="572" width="8" height="3.2" rx="1" fill="#FCD34D"/><rect x="156" y="574.5" width="16" height="11" rx="2.2" fill="#FCD34D"/>
+    <text x="182" y="585">write-tests/</text>
+    <rect x="156" y="596" width="8" height="3.2" rx="1" fill="#FCD34D"/><rect x="156" y="598.5" width="16" height="11" rx="2.2" fill="#FCD34D"/>
+    <text x="182" y="609">add-database-change/</text>
+    <rect x="156" y="620" width="8" height="3.2" rx="1" fill="#FCD34D"/><rect x="156" y="622.5" width="16" height="11" rx="2.2" fill="#FCD34D"/>
+    <text x="182" y="633">run-background-job/</text>
   </g>
-  <text x="478" y="452" font-size="12" fill="#9CA3AF">⚡ your agent fills context via the</text>
-  <text x="478" y="469" font-size="12" fill="#9CA3AF">bootstrap skill — the CLI needs no API key.</text>
 
-  <!-- arrow 2 -->
-  <text x="826" y="330" text-anchor="middle" font-size="12" font-weight="600" fill="#6366F1">generate</text>
-  <path d="M794 344 H860" stroke="#C7CBDA" stroke-width="2.5" stroke-linecap="round"/>
-  <path d="M853 337 L862 344 L853 351" fill="none" stroke="#C7CBDA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- .github/ folder -->
+  <rect x="108" y="644" width="9" height="4" rx="1.5" fill="#A78BFA"/>
+  <rect x="108" y="647" width="22" height="15" rx="3" fill="#A78BFA"/>
+  <text x="142" y="663" font-size="15" font-weight="700" fill="#1F2937">.github/</text>
+  <line x1="134" y1="674" x2="150" y2="674" stroke="#E0E2EC" stroke-width="1.4"/>
+  <rect x="158" y="681" width="13" height="17" rx="2" fill="#FFFFFF" stroke="#E4DEF3" stroke-width="1.1"/><rect x="160" y="691" width="7" height="1.5" rx="0.7" fill="#A78BFA"/>
+  <text x="182" y="691" font-size="14" font-family="'SF Mono','Consolas',monospace" fill="#4B5563">pull_request_template.md</text>
 
-  <!-- ===== Card 3: Generate adapters ===== -->
-  <rect x="864" y="162" width="336" height="360" rx="18" fill="#E8EAF3"/>
-  <rect x="864" y="158" width="336" height="360" rx="18" fill="#FFFFFF" stroke="#E7E9F3" stroke-width="1.5"/>
-  <circle cx="896" cy="192" r="13" fill="#4F46E5"/>
-  <text x="896" y="197" text-anchor="middle" font-size="15" font-weight="700" fill="#FFFFFF">3</text>
-  <text x="920" y="190" font-size="16.5" font-weight="700" fill="#1F2937">Generate adapters</text>
-  <text x="920" y="209" font-size="12.5" fill="#9CA3AF">one per tool, from one source</text>
+  <!-- ===== group brackets + labels (inside left card) ===== -->
+  <!-- adapters -->
+  <path d="M456 214 q-6 0 -6 6 v12 q0 6 6 6" fill="none" stroke="#C7CBDA" stroke-width="2" stroke-linecap="round"/>
+  <line x1="450" y1="232" x2="446" y2="232" stroke="#C7CBDA" stroke-width="2" stroke-linecap="round"/>
+  <text x="472" y="228" font-size="14.5" font-weight="700" fill="#374151">Adapters</text>
+  <text x="472" y="245" font-size="12.5" fill="#9CA3AF">one per agent &#183; auto-generated</text>
 
-  <rect x="890" y="232" width="284" height="34" rx="9" fill="#EEF2FF" stroke="#C7D2FE"/>
-  <text x="906" y="253" font-size="13.5" font-weight="700" font-family="'SF Mono','Consolas',monospace" fill="#4F46E5">AGENTS.md</text>
-  <text x="1012" y="253" font-size="11.5" fill="#6366F1">the cross-tool standard</text>
+  <!-- .ai source -->
+  <path d="M456 302 q-6 0 -6 6 v66 q0 6 6 6" fill="none" stroke="#8AD9B8" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M456 450 q-6 0 -6 -6 v-66 q0 -6 6 -6" fill="none" stroke="#8AD9B8" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="450" y1="376" x2="444" y2="376" stroke="#8AD9B8" stroke-width="2.2" stroke-linecap="round"/>
+  <text x="472" y="372" font-size="15" font-weight="700" fill="#047857">Single source of truth</text>
+  <text x="472" y="390" font-size="12.5" fill="#6B7280">context &#183; standards &#183; policies</text>
 
-  <g font-size="13.5" font-family="'SF Mono','Consolas',monospace" fill="#374151">
-    <rect x="890" y="278" width="284" height="30" rx="8" fill="#F3F4FB" stroke="#E2E4F0"/><text x="906" y="298">CLAUDE.md</text><text x="1160" y="298" text-anchor="end" font-size="11" font-family="'Segoe UI'" fill="#9CA3AF">Claude Code</text>
-    <rect x="890" y="314" width="284" height="30" rx="8" fill="#F3F4FB" stroke="#E2E4F0"/><text x="906" y="334">.cursor/rules/*.mdc</text><text x="1160" y="334" text-anchor="end" font-size="11" font-family="'Segoe UI'" fill="#9CA3AF">Cursor</text>
-    <rect x="890" y="350" width="284" height="30" rx="8" fill="#F3F4FB" stroke="#E2E4F0"/><text x="906" y="370">copilot-instructions</text><text x="1160" y="370" text-anchor="end" font-size="11" font-family="'Segoe UI'" fill="#9CA3AF">Copilot</text>
-    <rect x="890" y="386" width="284" height="30" rx="8" fill="#F3F4FB" stroke="#E2E4F0"/><text x="906" y="406">GEMINI.md</text><text x="1160" y="406" text-anchor="end" font-size="11" font-family="'Segoe UI'" fill="#9CA3AF">Gemini · Codex</text>
+  <!-- skills -->
+  <path d="M456 504 q-6 0 -6 6 v54 q0 6 6 6" fill="none" stroke="#F3CE7A" stroke-width="2.2" stroke-linecap="round"/>
+  <path d="M456 628 q-6 0 -6 -6 v-54 q0 -6 6 -6" fill="none" stroke="#F3CE7A" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="450" y1="566" x2="444" y2="566" stroke="#F3CE7A" stroke-width="2.2" stroke-linecap="round"/>
+  <text x="472" y="562" font-size="15" font-weight="700" fill="#B45309">Reusable skills</text>
+  <text x="472" y="580" font-size="12.5" fill="#6B7280">portable SKILL.md workflows</text>
+
+  <!-- github label -->
+  <rect x="470" y="653" width="96" height="22" rx="11" fill="#F5F3FF" stroke="#E4DEF3" stroke-width="1"/>
+  <text x="518" y="668" text-anchor="middle" font-size="12" font-weight="600" fill="#7C3AED">PR template</text>
+
+  <!-- ===================== RIGHT CARD A: one source -> every agent ===================== -->
+  <rect x="740" y="156" width="460" height="266" rx="18" fill="#E8EAF3"/>
+  <rect x="740" y="152" width="460" height="266" rx="18" fill="#FFFFFF" stroke="#E7E9F3" stroke-width="1.5"/>
+  <text x="766" y="190" font-size="18" font-weight="800" fill="#1F2937">One source &#8594; every agent</text>
+  <text x="766" y="212" font-size="13" fill="#6B7280">Generate the right rules file for each tool:</text>
+
+  <g font-size="13.5" font-weight="600">
+    <rect x="766" y="226" width="196" height="34" rx="9" fill="#F3F4FB" stroke="#E2E4F0" stroke-width="1"/><text x="864" y="248" text-anchor="middle" fill="#374151">Claude Code</text>
+    <rect x="978" y="226" width="196" height="34" rx="9" fill="#F3F4FB" stroke="#E2E4F0" stroke-width="1"/><text x="1076" y="248" text-anchor="middle" fill="#374151">Codex CLI</text>
+    <rect x="766" y="270" width="196" height="34" rx="9" fill="#F3F4FB" stroke="#E2E4F0" stroke-width="1"/><text x="864" y="292" text-anchor="middle" fill="#374151">Cursor</text>
+    <rect x="978" y="270" width="196" height="34" rx="9" fill="#F3F4FB" stroke="#E2E4F0" stroke-width="1"/><text x="1076" y="292" text-anchor="middle" fill="#374151">GitHub Copilot</text>
+    <rect x="766" y="314" width="196" height="34" rx="9" fill="#F3F4FB" stroke="#E2E4F0" stroke-width="1"/><text x="864" y="336" text-anchor="middle" fill="#374151">Gemini CLI</text>
+    <rect x="978" y="314" width="196" height="34" rx="9" fill="#F3F4FB" stroke="#E2E4F0" stroke-width="1"/><text x="1076" y="336" text-anchor="middle" fill="#374151">Windsurf</text>
+    <rect x="766" y="358" width="196" height="34" rx="9" fill="#F3F4FB" stroke="#E2E4F0" stroke-width="1"/><text x="864" y="380" text-anchor="middle" fill="#374151">Cline</text>
+    <rect x="978" y="358" width="196" height="34" rx="9" fill="#F3F4FB" stroke="#E2E4F0" stroke-width="1"/><text x="1076" y="380" text-anchor="middle" fill="#374151">opencode</text>
   </g>
-  <text x="890" y="440" font-size="12" fill="#9CA3AF">written inside managed blocks —</text>
-  <text x="890" y="457" font-size="12" fill="#9CA3AF">your own edits outside them survive.</text>
+  <text x="766" y="410" font-size="12.5" fill="#9CA3AF">via <tspan font-family="'SF Mono','Consolas',monospace" fill="#6B7280">CLAUDE.md</tspan> + the <tspan font-family="'SF Mono','Consolas',monospace" fill="#6B7280">AGENTS.md</tspan> standard</text>
 
-  <!-- bottom command bar -->
-  <g font-size="13" font-weight="600" font-family="'SF Mono','Consolas',monospace">
-    <rect x="360" y="556" width="120" height="34" rx="9" fill="#FFFFFF" stroke="#D5D8E4"/><text x="420" y="578" text-anchor="middle" fill="#4F46E5">init</text>
-    <rect x="492" y="556" width="120" height="34" rx="9" fill="#FFFFFF" stroke="#D5D8E4"/><text x="552" y="578" text-anchor="middle" fill="#4F46E5">generate</text>
-    <rect x="624" y="556" width="120" height="34" rx="9" fill="#FFFFFF" stroke="#D5D8E4"/><text x="684" y="578" text-anchor="middle" fill="#4F46E5">check</text>
+  <!-- ===================== RIGHT CARD B: scan & fill ===================== -->
+  <rect x="740" y="442" width="460" height="290" rx="18" fill="#DCDFF6"/>
+  <rect x="740" y="438" width="460" height="290" rx="18" fill="#EEF2FF" stroke="#C7D2FE" stroke-width="1.5"/>
+  <path d="M772,458 L761,480 L770,480 L763,500 L784,474 L774,474 L782,458 Z" fill="#4F46E5"/>
+  <text x="794" y="478" font-size="19" font-weight="800" fill="#3730A3">Scan &amp; fill</text>
+  <g font-size="14.5" fill="#4338CA">
+    <text x="766" y="510">Run it once &#8212; then your own coding agent</text>
+    <text x="766" y="532">reads the codebase, fills in the standards,</text>
+    <text x="766" y="554">and drafts your project&#8217;s skills.</text>
   </g>
-  <text x="760" y="578" font-size="12.5" fill="#9CA3AF">— `check` gates PR drift in CI. Rides the open AGENTS.md standard.</text>
+  <line x1="766" y1="578" x2="1174" y2="578" stroke="#C7D2FE" stroke-width="1.2"/>
+  <text x="766" y="602" font-size="12" font-weight="700" fill="#6366F1" letter-spacing="1">WORKS WITH</text>
+  <g font-size="12.5" font-weight="600" fill="#4F46E5">
+    <rect x="766" y="614" width="125" height="32" rx="8" fill="#FFFFFF" stroke="#C7D2FE" stroke-width="1"/><text x="828" y="634" text-anchor="middle">claude code</text>
+    <rect x="899" y="614" width="125" height="32" rx="8" fill="#FFFFFF" stroke="#C7D2FE" stroke-width="1"/><text x="961" y="634" text-anchor="middle">codex</text>
+    <rect x="1032" y="614" width="125" height="32" rx="8" fill="#FFFFFF" stroke="#C7D2FE" stroke-width="1"/><text x="1094" y="634" text-anchor="middle">opencode</text>
+  </g>
+  <text x="766" y="686" font-size="13.5" font-style="italic" fill="#4338CA">The kit is the structure. Your agent is the brain.</text>
 </svg>
