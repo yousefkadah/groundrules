@@ -28,7 +28,7 @@ function initInto(dir) {
   return { d, composed };
 }
 
-// 1. Laravel: detection + pack merge + Boost recommendation
+// 1. Laravel: detection + pack merge + Boost recommendation + placeholder guard
 {
   const dir = scaffold({ 'composer.json': JSON.stringify({ require: { 'laravel/framework': '^12' } }), 'artisan': '' });
   const { d, composed } = initInto(dir);
@@ -37,27 +37,34 @@ function initInto(dir) {
   const agents = fs.readFileSync(path.join(dir, 'AGENTS.md'), 'utf8');
   ok(/Untrusted input is data/.test(agents), 'core security section present');
   ok(/Laravel \/ PHP specifics/.test(agents), 'laravel pack merged');
-  ok(/php artisan test/.test(agents), 'laravel test command present');
+  ok(lib.hasPlaceholders(dir), 'placeholder guard fires on fresh context.md');
+  ok(/UNCONFIGURED/.test(agents), 'unconfigured banner rendered into AGENTS.md');
   ok(fs.existsSync(path.join(dir, '.cursor/rules/groundrules.mdc')), 'cursor adapter written');
   ok(fs.readFileSync(path.join(dir, 'CLAUDE.md'), 'utf8').includes('@AGENTS.md'), 'CLAUDE.md imports AGENTS.md');
   ok(lib.check(dir, {}).length === 0, 'in sync right after emit');
-  // drift
   fs.appendFileSync(path.join(dir, '.ai/coding-standards.md'), '\n- hand edit\n');
   ok(lib.check(dir, {}).length > 0, 'drift detected after editing .ai/');
   lib.emit(dir, {});
   ok(lib.check(dir, {}).length === 0, 'generate re-syncs');
 }
 
-// 2. Node: node pack, NO boost
+// 2. Node + TypeScript: node-ts pack, NO boost
 {
-  const dir = scaffold({ 'package.json': JSON.stringify({ dependencies: { react: '^18', next: '^14' } }) });
+  const dir = scaffold({ 'package.json': JSON.stringify({ dependencies: { react: '^18', next: '^14' }, devDependencies: { typescript: '^5' } }) });
   const { d, composed } = initInto(dir);
-  ok(d.stacks.includes('node-ts'), 'detects node-ts');
+  ok(d.stacks.includes('node-ts'), 'detects node-ts when TypeScript present');
   ok(!composed.recommends.some((r) => r.name === 'laravel/boost'), 'node project does NOT recommend boost');
-  ok(/TypeScript strict/.test(fs.readFileSync(path.join(dir, 'AGENTS.md'), 'utf8')), 'node pack merged');
 }
 
-// 3. Bare: universal core only, still generates adapters
+// 3. Vue + Inertia (no TypeScript): vue pack, NOT node-ts  (the Monica case)
+{
+  const dir = scaffold({ 'package.json': JSON.stringify({ dependencies: { vue: '^3', '@inertiajs/vue3': '^1' } }) });
+  const { d } = initInto(dir);
+  ok(d.stacks.includes('vue'), 'detects vue');
+  ok(!d.stacks.includes('node-ts'), 'does NOT misfire node-ts on a plain-JS Vue repo');
+}
+
+// 4. Bare: universal core only, still generates adapters
 {
   const dir = scaffold({ 'README.md': '# x' });
   const { d } = initInto(dir);

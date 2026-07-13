@@ -2,16 +2,30 @@ These principles are stack-agnostic. Language- and framework-specific rules are 
 active stack pack — those win on any concrete detail (commands, idioms, file layout).
 
 - **Match the neighbors.** Before writing a file, read a sibling in the same area and mirror its
-  structure, naming, and idioms. Consistency beats personal preference.
+  structure, naming, and idioms. This beats every generic rule below when they conflict — **except**
+  the security, tenant-isolation, validation, and data-correctness rules, which always outrank a
+  neighboring pattern (never copy a legacy insecure or unsafe one).
 - **Reuse before creating.** Look for an existing function/component/helper before adding one.
-- **Small, reviewable changes.** One concern per change. If the task sprawls, stop and propose a plan
-  before continuing.
-- **Descriptive names.** `isEligibleForRefund`, not `check()`. Names should say what, not how.
-- **Types and contracts at the edges.** Prefer explicit types/interfaces on public functions and data
-  crossing a boundary (HTTP, DB, queue, third-party).
-- **Handle the unhappy path.** Nulls, empties, timeouts, and permission denials are part of the
-  feature, not an afterthought.
+- **Small, reviewable changes.** One concern per change. If the task sprawls, stop and propose a plan.
+- **Descriptive names.** `isEligibleForRefund`, not `check()`. Names say what, not how.
+- **Contracts at the edges.** Put explicit types on public functions and on data crossing a boundary
+  (HTTP, DB, queue, UI, third-party). Map that data to DTOs/resources with **allow-listed fields** —
+  don't serialize internal models wholesale.
+- **Handle the unhappy path.** Nulls, empties, timeouts, and permission denials are part of the feature.
 - **Comment the why, not the what.** Only annotate genuinely non-obvious logic.
-- **Keep diffs tight.** No drive-by reformatting of lines you didn't change. Run the project's
-  formatter/linter before finishing.
+- **Keep diffs tight.** No drive-by reformatting. Run the project's formatter/linter before finishing.
 - **Reference code as `path/to/file:line`** so humans can click straight to it.
+
+**Data correctness (get these wrong and data rots silently):**
+- **Money:** use the repo's money representation — a money library or integer minor units — **never
+  floats**; keep currency explicit and round only at boundaries.
+- **Dates & time:** store instants in **UTC**, keep the user's timezone for display, model date-only
+  values separately, and test DST boundaries.
+- **Multi-step writes:** wrap related writes in a **transaction** and lean on DB constraints
+  (unique/FK); make externally-visible effects **idempotent** so a retry can't double-charge or
+  double-send. Keep transactions **short and DB-only** — no remote calls or slow work while a lock is
+  held; dispatch side effects **after commit**.
+- **User-facing text:** route through the repo's **i18n** layer (translation keys, pluralization) and
+  keep it RTL-safe.
+- **Generators:** prefer the framework's generators, then **move the output to match the repo's layout**
+  (module/domain/namespace) if it differs from the framework default — match the neighboring file.

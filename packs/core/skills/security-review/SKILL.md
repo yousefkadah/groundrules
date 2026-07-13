@@ -1,39 +1,53 @@
 ---
 name: security-review
-description: Use before merging or when explicitly reviewing security — scan a diff (or a file/endpoint) for injection, secret exposure, broken authorization, unsafe deserialization, SSRF, and dependency risk. Reports findings by severity with a concrete failure scenario each.
+description: Use before merging or when reviewing security — scan a diff (or a file/endpoint) for injection, secret exposure, broken authorization, mass assignment, IDOR, unsafe redirects, over-serialization, SSRF, file-upload, and dependency risk. Reports findings by severity with a concrete failure scenario each.
 ---
 
 # Security review
 
-Review the change with an attacker's mindset. Report each finding as **severity → file:line → concrete
-failure scenario → fix**. If you find nothing, say so plainly rather than inventing issues.
+Review with an attacker's mindset. Report each finding as **severity → file:line → concrete failure
+scenario → fix**. If you find nothing, say so plainly rather than inventing issues.
+
+## Severity rubric
+Rate by **exploitability × data/impact**: **CRITICAL** = unauthenticated or trivial path to secrets, PII,
+or RCE; **HIGH** = authenticated privilege escalation / cross-tenant data access; **MEDIUM** = needs
+unusual conditions or limited impact; **LOW** = defense-in-depth. Prioritize the exploitable over the
+theoretical.
 
 ## Checklist
+**Injection & untrusted input** — user/tool/web input reaching a shell, SQL/ORM raw query, file path,
+template, or `eval`; parameterized/escaped/allow-listed? Path traversal on user filenames? **SSRF** on a
+user-supplied URL?
 
-**Injection & untrusted input**
-- [ ] User/tool/web input reaching a shell, SQL, ORM raw query, file path, template, or `eval`?
-      Is it parameterized / escaped / allow-listed?
-- [ ] Path traversal on any user-controlled filename?
-- [ ] SSRF: does the server fetch a user-supplied URL without an allow-list?
+**AuthZ / access** — every new endpoint checks authN **and** authZ (not just "logged in")? **IDOR**:
+nested resources authorized through the owning parent, and route-model binding scoped? No **mass
+assignment** (`$request->all()` → `create/update/fill`, missing `$fillable`/`$guarded`)?
 
-**Secrets**
-- [ ] Any key, token, password, connection string, or PII in the diff, logs, error messages, or a URL?
-- [ ] Secrets read from config/env (not hard-coded)? Nothing secret sent to a third party/LLM/log?
+**Secrets** — any key/token/password/PII in the diff, logs, errors, or a URL? Read from config/env, not
+hard-coded? Nothing secret sent to a third party / LLM / log?
 
-**AuthN / AuthZ**
-- [ ] Every new endpoint/action checks authentication **and** authorization (not just "logged in")?
-- [ ] Multi-tenant/multi-user: is the query scoped so one actor can't reach another's records (IDOR)?
+**Data exposure** — whole models/relations serialized to an API or UI props instead of allow-listed
+fields/resources? Unsafe **open redirect**? Signed-URL / expiring-link misuse?
 
-**Data handling**
-- [ ] Unsafe deserialization of untrusted data? Unbounded input (zip bombs, huge payloads)?
-- [ ] Output encoded for its sink (HTML/JSON/CSV) to prevent XSS/CSV injection?
+**Files & uploads** — size / MIME / content validated, stored privately, generated filename, authorized
+download, path normalized?
 
-**Dependencies & supply chain**
-- [ ] New dependency real, maintained, correctly spelled (no typosquat)? Pinned appropriately?
+**Web** — CSRF protection intact (any exemption narrow, e.g. verified webhooks)? CORS not wildcarded for
+credentialed requests? Output encoded for its sink (HTML/JSON/CSV → XSS / CSV-injection)?
 
-**Cryptography & sessions**
-- [ ] No home-rolled crypto; standard libraries; no weak hashing for passwords; secure random for tokens.
+**Stored / rich content** — user-authored HTML or Markdown rendered without sanitization (`v-html`, raw
+HTML)? Sanitize server-side, allow-list URL schemes (no `javascript:`), and test stored payloads.
+
+**Auth & sessions** — login/reset/verify flows rate-limited and non-enumerable? Token/session expiry,
+revocation, and rotation? Session fixation prevented on privilege change? MFA and account-recovery paths
+safe? (Check Fortify / Sanctum / Socialite / 2FA / WebAuthn where present.)
+
+**Data handling** — unsafe deserialization of untrusted data? Unbounded input (zip bombs, huge payloads)?
+
+**Dependencies** — new dep real, maintained, correctly spelled (no typosquat), pinned, licensed; install
+scripts reviewed?
+
+**Crypto / sessions** — no home-rolled crypto; strong password hashing; secure random for tokens.
 
 ## Output
-For each issue: `SEVERITY (critical/high/medium/low) — path:line — what an attacker does — the fix.`
-Prioritize the exploitable over the theoretical.
+For each: `SEVERITY — path:line — what an attacker does — the fix.`

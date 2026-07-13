@@ -59,6 +59,8 @@ function cmdInit(args) {
   printPlan(plan);
   printRecommends(composed.recommends);
 
+  if (lib.hasPlaceholders(args.cwd)) console.log('\n' + paint('yellow', '⚠ .ai/context.md has «placeholders» — run the bootstrap skill in your agent to fill this project\'s real context before relying on the rules.'));
+
   console.log('\n' + paint('bold', 'Next:'));
   console.log(`  1. Open your coding agent (Claude Code / Codex / opencode) in this repo.`);
   console.log(`  2. Run the ${paint('cyan', 'bootstrap')} skill — it scans the project and fills in ${paint('cyan', '.ai/')} + drafts skills.`);
@@ -74,6 +76,7 @@ function cmdGenerate(args) {
   const plan = lib.emit(args.cwd, { dryRun: args.dryRun, tools: args.tools, all: args.all });
   console.log(paint('bold', args.dryRun ? 'Would regenerate:' : 'Regenerated adapters from .ai/:'));
   printPlan(plan);
+  if (lib.hasPlaceholders(args.cwd)) console.log(paint('yellow', '⚠ .ai/context.md still has «placeholders» — run the bootstrap skill to fill them.'));
 }
 
 function cmdCheck(args) {

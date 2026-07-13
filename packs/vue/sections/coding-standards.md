@@ -1,0 +1,7 @@
+- **Match the repo's Vue style** — Options API vs Composition API / `<script setup>` — before writing; read a sibling component and mirror it. Don't introduce a different style.
+- One root concern per component; declare **explicit `props` and `emits`** (typed where the repo uses TS); never mutate a prop.
+- **Inertia:** pages live in the repo's `Pages/` dir; data comes from server-side props (`Inertia::render`) read via `usePage()`/page props — don't re-fetch what the controller already passes. Keep **secrets/tokens out of props and client code**.
+- Follow the repo's **ESLint + Prettier** config and run its lint script; don't hand-format. Use the repo's package manager — **check for `yarn.lock` / `pnpm-lock.yaml` / `package-lock.json`** and use that one.
+- User-facing text goes through the repo's **i18n** layer (translation keys, pluralization) and stays **RTL-safe** (logical CSS properties, never hard-coded `left`/`right`).
+- **Accessibility:** semantic elements + labels, keyboard and focus support with a visible focus ring, accessible error messaging, and honor reduced-motion — don't build an interactive control out of bare `<div>`s.
+- **SSR/hydration (if the app builds SSR):** touch `window`/`document` only inside client lifecycle guards; keep server and client render deterministic; run the **full SSR build**, not just the client one.

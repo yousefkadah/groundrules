@@ -117,10 +117,11 @@ function detect(cwd) {
   const pkg = readJsonSafe(path.join(cwd, 'package.json'));
   if (pkg) {
     const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-    stacks.push('node-ts');
-    if (deps.next) signals.push('package.json:next');
-    else if (deps.react) signals.push('package.json:react');
-    else signals.push('package.json');
+    const hasTs = exists(path.join(cwd, 'tsconfig.json')) || !!deps.typescript || !!deps['@types/node'];
+    const hasVue = !!deps.vue || !!deps['@inertiajs/vue3'] || !!deps['@vue/runtime-core'] || !!deps.nuxt;
+    if (hasTs) { stacks.push('node-ts'); signals.push(deps.next ? 'package.json:next+ts' : (deps.react ? 'package.json:react+ts' : 'tsconfig/typescript')); }
+    if (hasVue) { stacks.push('vue'); signals.push('package.json:vue' + (deps['@inertiajs/vue3'] ? '+inertia' : '')); }
+    if (!hasTs && !hasVue) signals.push('package.json (js)');
   }
   if (exists(path.join(cwd, 'pyproject.toml')) || exists(path.join(cwd, 'requirements.txt')) || exists(path.join(cwd, 'manage.py'))) {
     stacks.push('python');
@@ -186,10 +187,23 @@ function writeCanonical(cwd, composed, plan) {
   if (!plan.dryRun) write(path.join(aiDir, '.groundrules.json'), JSON.stringify(manifest, null, 2) + '\n');
 }
 
+// ---------- unconfigured-placeholder guard ----------
+function hasPlaceholders(cwd) {
+  const aiDir = path.join(cwd, '.ai');
+  for (const { key } of SECTION_ORDER) {
+    const f = path.join(aiDir, `${key}.md`);
+    if (exists(f) && read(f).includes('«')) return true;
+  }
+  return false;
+}
+
 // ---------- build the composed body from .ai/ ----------
 function buildBody(cwd) {
   const aiDir = path.join(cwd, '.ai');
   const parts = ['<!-- This is the canonical set of instructions for AI coding agents on this repo. Source: .ai/ (edit there, then `groundrules generate`). -->', ''];
+  if (hasPlaceholders(cwd)) {
+    parts.push('> ⚠ **UNCONFIGURED** — `.ai/context.md` still contains «placeholders». Run the `bootstrap` skill so an agent fills in this project’s real context, architecture, and commands. Until then, treat the stack-specific guidance below as generic defaults, not verified facts.', '');
+  }
   for (const { key, title } of SECTION_ORDER) {
     const f = path.join(aiDir, `${key}.md`);
     if (!exists(f)) continue;
@@ -298,5 +312,5 @@ function check(cwd, opts) {
 
 module.exports = {
   C, paint, exists, read, readJsonSafe, ensureDir, write, listDirs, copyDir,
-  SECTION_ORDER, ADAPTERS, loadPack, detect, compose, writeCanonical, buildBody, emit, check, selectAdapters,
+  SECTION_ORDER, ADAPTERS, loadPack, detect, compose, writeCanonical, buildBody, emit, check, selectAdapters, hasPlaceholders,
 };

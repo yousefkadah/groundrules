@@ -1,0 +1,2 @@
+- Use the repo's JS test runner **if it has one** (Vitest/Jest) — run the narrowest (`<pkg-manager> test <pattern>`) and paste output.
+- Many Inertia apps test behavior through the **backend feature tests** instead. If there is no JS runner, don't invent one — verify UI changes in the running app and say so.

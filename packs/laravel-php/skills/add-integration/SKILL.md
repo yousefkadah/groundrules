@@ -1,6 +1,6 @@
 ---
 name: add-integration
-description: Use when adding or changing a third-party integration in a Laravel app — payment/SMS/email gateway, external API/SDK, OAuth provider, bank/government file format, or a webhook. Laravel-specific scaffold (HTTP client, config/services, ServiceProvider, webhook route, Pest tests) plus a durable integration record.
+description: Use when adding or changing a third-party integration in a Laravel app — payment/SMS/email gateway, external API/SDK, OAuth provider, bank/government file format, or a webhook. Laravel-specific scaffold (HTTP client, config/services, webhook route, tests) plus a durable integration record.
 ---
 
 # Add a third-party integration (Laravel)
@@ -11,18 +11,26 @@ Follow the core discovery → scaffold → test → record discipline, with thes
 - Add keys under `config/services.php` referencing `.env`; keep **sandbox vs prod** separate and labeled.
 - Never inline secret values; add empty keys to `.env.example` only. Reference via `config('services.<provider>.<key>')`.
 
-## Scaffold
-- **Client** in `app/Services/Integrations/{Provider}/{Provider}Client.php` using Laravel's `Http`
-  client with an explicit `->timeout()` and `->retry()`. Bind it in a **ServiceProvider** if it needs wiring.
-- **DTOs** for request/response (typed; no raw arrays).
-- **Webhooks:** a route + controller that verifies the signature first, is idempotent (dedupe by the
-  provider's event id), responds fast, and dispatches a **queued job** for the real work.
-- Map provider errors to your own exception; never leak a raw provider error to the UI.
+## Scaffold (match the repo's layout)
+- Put the **client where the repo already groups services** — match neighbors (e.g. `app/Services/...`,
+  `app/Domains/*/Services`, a dedicated integration namespace). Don't hardcode a path the repo doesn't use.
+- Use Laravel's `Http` client with an explicit `->timeout()`. **Retry only defined transient failures**
+  (timeouts / 5xx / 429) with exponential backoff + jitter — **never blindly retry non-idempotent
+  POSTs**; send an **idempotency key** or make the call provably idempotent.
+- **Outbound safety:** call only fixed/allow-listed hosts (guard against SSRF), don't follow redirects
+  to new hosts, verify TLS, **bound the response size**, redact secrets from logs, honor the provider's
+  rate limits, and support credential **rotation** (no single hard-pinned key).
+- **DTOs** for request/response (typed; no raw arrays). Map provider errors to your own exception; never
+  leak a raw provider error to the UI.
+- **Webhooks:** verify the signature against the **raw request body** with a timestamp tolerance (replay
+  window), record the provider's event id in a **unique** column to dedupe atomically, narrowly exempt
+  the route from CSRF, respond fast, and dispatch a **queued job** for the work.
+- **OAuth:** validate `state`, use PKCE, request minimal scopes, and store tokens encrypted.
 
-## Test
-- Use `Http::fake()` with **real captured sandbox payloads** as fixtures. Cover the happy path, malformed
-  responses, timeouts, signature failures, and duplicate webhook delivery. Run
-  `php artisan test --compact --filter={Provider}` and paste the output.
+## Test (use the repo's runner)
+- `Http::fake()` with **sanitized/synthetic** fixtures — never raw sandbox payloads that may carry PII,
+  credentials, or signatures. Cover happy path, malformed responses, timeouts, signature failures, and
+  duplicate webhook delivery. Run the repo's runner (`php artisan test --filter={Provider}`), paste output.
 
 ## Record
 Write `docs/integrations/{provider}.md`: provider + API/spec version, endpoints & auth, the **config

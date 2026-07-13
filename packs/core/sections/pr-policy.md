@@ -1,4 +1,6 @@
-- **Never commit to the default branch.** Branch first (`feat/…`, `fix/…`).
+- **Never commit to the default branch.** Branch first (`feat/…`, `fix/…`). Before switching/creating a
+  branch, check `git status` and the current branch, and **preserve any unrelated uncommitted changes** —
+  don't stash or discard the human's in-progress work.
 - **One logical change per branch/PR.** Keep it reviewable.
 - **Commit/push only when asked.** Don't push on your own initiative.
 - Follow the repo's existing commit convention (check `git log`). If it uses Conventional Commits
