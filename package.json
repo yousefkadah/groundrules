@@ -1,0 +1,34 @@
+{
+  "name": "agentstd",
+  "version": "0.1.0",
+  "description": "One source of truth for AI coding agents — detect your stack, scaffold standards + skills, and generate every tool's rules file (AGENTS.md, CLAUDE.md, Cursor, Copilot, Gemini) from one place.",
+  "bin": {
+    "agentstd": "bin/agentstd.js"
+  },
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "bin",
+    "src",
+    "packs"
+  ],
+  "scripts": {
+    "test": "node test/smoke.js"
+  },
+  "license": "MIT",
+  "author": "Yousef Kadah",
+  "keywords": [
+    "ai",
+    "agents",
+    "agents.md",
+    "claude-code",
+    "cursor",
+    "copilot",
+    "codex",
+    "gemini",
+    "coding-standards",
+    "laravel"
+  ]
+}

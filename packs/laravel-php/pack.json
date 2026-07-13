@@ -1,0 +1,17 @@
+{
+  "id": "laravel-php",
+  "name": "Laravel / PHP",
+  "extends": "core",
+  "description": "PHP 8 + Laravel idioms, Pest testing, and the artisan/deploy commands. Recommends Laravel Boost so the agent gets version-aware docs + app introspection.",
+  "detect": "composer.json requires laravel/framework, or an artisan file is present",
+  "recommends": [
+    {
+      "type": "package",
+      "manager": "composer",
+      "name": "laravel/boost",
+      "dev": true,
+      "install": "composer require laravel/boost --dev && php artisan boost:install",
+      "why": "Official Laravel MCP server: version-aware docs search + live app introspection (routes, DB schema, tinker, logs). Let the agent use it instead of guessing framework facts."
+    }
+  ]
+}

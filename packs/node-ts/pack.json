@@ -1,0 +1,8 @@
+{
+  "id": "node-ts",
+  "name": "Node / TypeScript",
+  "extends": "core",
+  "description": "TypeScript + Node idioms and the npm/pnpm test-and-build commands. Refines to React/Next when detected.",
+  "detect": "package.json present (react/next refine the signals)",
+  "recommends": []
+}

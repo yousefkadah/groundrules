@@ -1,0 +1,8 @@
+{
+  "id": "go",
+  "name": "Go",
+  "extends": "core",
+  "description": "Idiomatic Go (gofmt, error wrapping, context) and the go test workflow.",
+  "detect": "go.mod present",
+  "recommends": []
+}

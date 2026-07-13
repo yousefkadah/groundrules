@@ -1,0 +1,6 @@
+{
+  "id": "core",
+  "name": "Core",
+  "description": "Universal, stack-agnostic engineering standards, security guardrails, and skills for AI coding agents. Applied first to every project.",
+  "recommends": []
+}

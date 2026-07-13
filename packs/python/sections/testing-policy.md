@@ -1,0 +1,4 @@
+- **pytest** is the runner. Run the narrowest: `pytest -q path::test_name`, and paste command + output.
+- Use fixtures (and factory-boy/model_bakery if present) for data — not hand-built objects.
+- Cover happy path + a failure path; for Django assert DB-level isolation where relevant.
+- Mock the network and external services; don't hit real third parties in unit tests.
