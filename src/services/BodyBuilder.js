@@ -14,6 +14,9 @@ const UNCONFIGURED_BANNER = '> ⚠ **UNCONFIGURED** — `.ai/context.md` still c
 // force-loading hundreds of unreconciled lines every session.
 const IMPORT_CONTEXT_MARKER = '> ⓘ Imported from';
 const IMPORT_CONTEXT_POINTER = "> **Project context** was imported from your existing agent rules and isn't reorganized yet — the full text is in `AGENTS.md`. Run the `bootstrap` skill to sort it into the right sections (then it loads everywhere).";
+// Only lift a RAW import off the always-on surface once it's big enough to be
+// bloat; a small maintainer AGENTS.md (~24 lines) is useful and stays inline.
+const IMPORT_ALWAYS_MAX_LINES = 50;
 
 /**
  * Reads .ai/ and assembles the composed markdown body that adapters share.
@@ -115,7 +118,7 @@ class BodyBuilder {
           if (!globbed.has(name) && tail) out = out.replace(/\s*$/, '') + `\n\n### ${name} specifics\n\n` + tail;
         }
       }
-      if (key === 'context' && out.includes(IMPORT_CONTEXT_MARKER)) out = IMPORT_CONTEXT_POINTER;
+      if (key === 'context' && out.includes(IMPORT_CONTEXT_MARKER) && (out.match(/\n/g) || []).length >= IMPORT_ALWAYS_MAX_LINES) out = IMPORT_CONTEXT_POINTER;
       return { title, text: out };
     });
     return this._assembleMain(cwd, sectionTexts);

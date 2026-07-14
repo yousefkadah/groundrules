@@ -23,6 +23,8 @@ const DESC_ALWAYS: &str = "Project engineering standards, security guardrails, a
 // Prefix of collect_import's banner (must stay in sync with the JS BodyBuilder).
 const IMPORT_CONTEXT_MARKER: &str = "> ⓘ Imported from";
 const IMPORT_CONTEXT_POINTER: &str = "> **Project context** was imported from your existing agent rules and isn't reorganized yet — the full text is in `AGENTS.md`. Run the `bootstrap` skill to sort it into the right sections (then it loads everywhere).";
+// Only lift a raw import off the always-on surface once it's big enough to be bloat.
+const IMPORT_ALWAYS_MAX_LINES: usize = 50;
 const IMPORT_SENTENCE: &str = "This project uses [`AGENTS.md`](AGENTS.md) as the single source of truth for AI agent rules.";
 const IMPORT_INNER: &str = "This project uses [`AGENTS.md`](AGENTS.md) as the single source of truth for AI agent rules.\n\n@AGENTS.md";
 
@@ -632,8 +634,12 @@ fn build_always(cwd: &Path) -> String {
                     }
                 }
             }
-            // A raw import (context.md still carries the banner) → short pointer, not 100s of lines.
-            if title == "Project context" && out.contains(IMPORT_CONTEXT_MARKER) {
+            // A LARGE raw import (context.md still carries the banner) → short pointer, not 100s
+            // of lines; a small maintainer AGENTS.md stays inline (it's useful, not bloat).
+            if title == "Project context"
+                && out.contains(IMPORT_CONTEXT_MARKER)
+                && out.matches('\n').count() >= IMPORT_ALWAYS_MAX_LINES
+            {
                 out = IMPORT_CONTEXT_POINTER.to_string();
             }
             (title, out)

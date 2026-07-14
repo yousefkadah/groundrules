@@ -295,24 +295,41 @@ function initInto(dir) {
   ok(/agents-only unique/.test(found.body) && /claude-only unique/.test(found.body), 'unique single-line content from both sources kept');
 }
 
-// 18. lean import (Option C): raw imported context is NOT force-loaded into the always-on rule,
-//     but IS kept in the full-body adapters (AGENTS.md)
-{
-  const dir = scaffold({
-    'composer.json': JSON.stringify({ require: { 'laravel/framework': '^12' } }), 'artisan': '',
-    'CLAUDE.md': '# House\n\n- Money is stored in agorot UNIQUE-IMPORT-MARKER-ZZZ.\n- Another long imported rule line that carries real project detail here.\n',
-  });
+function importInto(dir) {
   const found = lib.importRules(dir);
   const d = lib.detect(dir); const c = lib.compose(['core', ...d.stacks]);
   c.sections.context = found.body;
   const p = []; p.dryRun = false; lib.writeCanonical(dir, c, p);
   lib.emit(dir, { freshPaths: found.consumedTargets });
-  const agents = fs.readFileSync(path.join(dir, 'AGENTS.md'), 'utf8');
-  const cursorMain = fs.readFileSync(path.join(dir, '.cursor/rules/groundrules.mdc'), 'utf8');
-  ok(agents.includes('UNIQUE-IMPORT-MARKER-ZZZ'), 'full body (AGENTS.md) keeps the imported context');
-  ok(!cursorMain.includes('UNIQUE-IMPORT-MARKER-ZZZ'), 'always-on rule does NOT force-load raw imported context');
+  return {
+    agents: fs.readFileSync(path.join(dir, 'AGENTS.md'), 'utf8'),
+    cursorMain: fs.readFileSync(path.join(dir, '.cursor/rules/groundrules.mdc'), 'utf8'),
+  };
+}
+
+// 18. lean import (Option C): a LARGE raw import is lifted off the always-on rule,
+//     but stays in the full-body adapters (AGENTS.md)
+{
+  const big = Array.from({ length: 70 }, (_, i) => `- imported rule number ${i} carrying real project detail`).join('\n');
+  const dir = scaffold({
+    'composer.json': JSON.stringify({ require: { 'laravel/framework': '^12' } }), 'artisan': '',
+    'CLAUDE.md': '# House\n\nUNIQUE-IMPORT-MARKER-ZZZ\n\n' + big + '\n',
+  });
+  const { agents, cursorMain } = importInto(dir);
+  ok(agents.includes('UNIQUE-IMPORT-MARKER-ZZZ'), 'full body (AGENTS.md) keeps the large imported context');
+  ok(!cursorMain.includes('UNIQUE-IMPORT-MARKER-ZZZ'), 'always-on rule does NOT force-load a large raw import');
   ok(/bootstrap/.test(cursorMain) && /Project context/.test(cursorMain), 'always-on rule points to bootstrap for context');
   ok(lib.check(dir, {}).length === 0, 'lean-import adapters are in sync');
+}
+
+// 18b. a SMALL import stays inline in the always-on rule (no bloat to avoid — the llm/Skyvern case)
+{
+  const dir = scaffold({
+    'composer.json': JSON.stringify({ require: { 'laravel/framework': '^12' } }), 'artisan': '',
+    'CLAUDE.md': '# Dev setup\n\nSMALL-IMPORT-MARKER-QQQ: run `pytest` before pushing; format with ruff.\n',
+  });
+  const { cursorMain } = importInto(dir);
+  ok(cursorMain.includes('SMALL-IMPORT-MARKER-QQQ'), 'a small imported context stays inline in the always-on rule');
 }
 
 console.log(`ok - ${passed} smoke assertions passed`);
