@@ -9,6 +9,12 @@ const { splitSection } = require('../support/sectionSplit');
 const CANON_COMMENT = '<!-- This is the canonical set of instructions for AI coding agents on this repo. Source: .ai/ (edit there, then `groundrules generate`). -->';
 const UNCONFIGURED_BANNER = '> ⚠ **UNCONFIGURED** — `.ai/context.md` still contains «placeholders». Run the `bootstrap` skill so an agent fills in this project’s real context, architecture, and commands. Until then, treat the stack-specific guidance below as generic defaults, not verified facts.';
 
+// Prefix of ImportService's banner (must stay in sync). When context.md still
+// carries a raw import, the always-on surface uses a short pointer instead of
+// force-loading hundreds of unreconciled lines every session.
+const IMPORT_CONTEXT_MARKER = '> ⓘ Imported from';
+const IMPORT_CONTEXT_POINTER = "> **Project context** was imported from your existing agent rules and isn't reorganized yet — the full text is in `AGENTS.md`. Run the `bootstrap` skill to sort it into the right sections (then it loads everywhere).";
+
 /**
  * Reads .ai/ and assembles the composed markdown body that adapters share.
  *
@@ -89,18 +95,27 @@ class BodyBuilder {
     return this._assembleMain(cwd, this.sections(cwd));
   }
 
-  /** ALWAYS body: universal rules only; each applied pack's specifics are stripped out. */
+  /**
+   * ALWAYS body: universal rules only. Each globbed pack's specifics move to
+   * scoped files, and a RAW import (context.md still carrying the import banner)
+   * is replaced by a short pointer so hundreds of unreconciled lines don't
+   * force-load every session — the full text stays in the full-body adapters
+   * (AGENTS.md etc.) until `bootstrap` sorts it into real sections.
+   */
   buildAlways(cwd) {
-    const names = this.appliedPacks(cwd).map((p) => p.name);
-    if (!names.length) return this.build(cwd); // byte-identical when there are no stacks
-    const globbed = new Set(this.appliedPacks(cwd).filter((p) => p.globs.length).map((p) => p.name));
-    const sectionTexts = this.sections(cwd).map(({ title, text }) => {
-      const { head, tails } = splitSection(text, names);
-      // Keep any non-scoped pack's tail inline; only globbed packs move to scoped files.
-      let out = head;
-      for (const [name, tail] of Object.entries(tails)) {
-        if (!globbed.has(name) && tail) out = out.replace(/\s*$/, '') + `\n\n### ${name} specifics\n\n` + tail;
+    const applied = this.appliedPacks(cwd);
+    const names = applied.map((p) => p.name);
+    const globbed = new Set(applied.filter((p) => p.globs.length).map((p) => p.name));
+    const sectionTexts = this.sections(cwd).map(({ key, title, text }) => {
+      let out = text;
+      if (names.length) {
+        const { head, tails } = splitSection(text, names);
+        out = head; // keep any non-scoped pack's tail inline; only globbed packs move to scoped files
+        for (const [name, tail] of Object.entries(tails)) {
+          if (!globbed.has(name) && tail) out = out.replace(/\s*$/, '') + `\n\n### ${name} specifics\n\n` + tail;
+        }
       }
+      if (key === 'context' && out.includes(IMPORT_CONTEXT_MARKER)) out = IMPORT_CONTEXT_POINTER;
       return { title, text: out };
     });
     return this._assembleMain(cwd, sectionTexts);

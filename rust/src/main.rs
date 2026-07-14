@@ -20,6 +20,9 @@ const HEADER_NOTE: &str = "<!-- Managed by groundrules. Edit files in .ai/, then
 const CANON_COMMENT: &str = "<!-- This is the canonical set of instructions for AI coding agents on this repo. Source: .ai/ (edit there, then `groundrules generate`). -->";
 const BANNER: &str = "> ⚠ **UNCONFIGURED** — `.ai/context.md` still contains «placeholders». Run the `bootstrap` skill so an agent fills in this project’s real context, architecture, and commands. Until then, treat the stack-specific guidance below as generic defaults, not verified facts.";
 const DESC_ALWAYS: &str = "Project engineering standards, security guardrails, and skills for AI agents (always applied) — managed by groundrules.";
+// Prefix of collect_import's banner (must stay in sync with the JS BodyBuilder).
+const IMPORT_CONTEXT_MARKER: &str = "> ⓘ Imported from";
+const IMPORT_CONTEXT_POINTER: &str = "> **Project context** was imported from your existing agent rules and isn't reorganized yet — the full text is in `AGENTS.md`. Run the `bootstrap` skill to sort it into the right sections (then it loads everywhere).";
 const IMPORT_SENTENCE: &str = "This project uses [`AGENTS.md`](AGENTS.md) as the single source of truth for AI agent rules.";
 const IMPORT_INNER: &str = "This project uses [`AGENTS.md`](AGENTS.md) as the single source of truth for AI agent rules.\n\n@AGENTS.md";
 
@@ -614,20 +617,24 @@ fn build_body(cwd: &Path) -> String {
 /// ALWAYS body: universal rules only; each globbed pack's specifics are stripped out.
 fn build_always(cwd: &Path) -> String {
     let packs = applied_packs(cwd);
-    if packs.is_empty() {
-        return build_body(cwd);
-    }
     let names: Vec<String> = packs.iter().map(|(_, n, _)| n.clone()).collect();
     let globbed: HashSet<String> = packs.iter().filter(|(_, _, g)| !g.is_empty()).map(|(_, n, _)| n.clone()).collect();
     let section_texts: Vec<(String, String)> = read_sections(cwd)
         .into_iter()
         .map(|(title, text)| {
-            let (head, tails) = split_section(&text, &names);
-            let mut out = head;
-            for (name, tail) in tails {
-                if !globbed.contains(&name) && !tail.is_empty() {
-                    out = format!("{}\n\n### {} specifics\n\n{}", out.trim_end(), name, tail);
+            let mut out = text.clone();
+            if !names.is_empty() {
+                let (head, tails) = split_section(&text, &names);
+                out = head;
+                for (name, tail) in tails {
+                    if !globbed.contains(&name) && !tail.is_empty() {
+                        out = format!("{}\n\n### {} specifics\n\n{}", out.trim_end(), name, tail);
+                    }
                 }
+            }
+            // A raw import (context.md still carries the banner) → short pointer, not 100s of lines.
+            if title == "Project context" && out.contains(IMPORT_CONTEXT_MARKER) {
+                out = IMPORT_CONTEXT_POINTER.to_string();
             }
             (title, out)
         })
