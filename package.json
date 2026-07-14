@@ -1,6 +1,6 @@
 {
   "name": "@yousefkadah/groundrules",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "One source of truth for AI coding agents — detect your stack, scaffold standards + skills, and generate every tool's rules file (AGENTS.md, CLAUDE.md, Cursor, Copilot, Gemini) from one place.",
   "bin": {
     "groundrules": "bin/groundrules.js"
