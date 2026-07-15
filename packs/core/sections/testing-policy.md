@@ -9,9 +9,9 @@ run and shown to pass before the change is done. The stack pack below names the 
   or signatures).
 - Prove **isolation** where it matters (multi-tenant, multi-user): actor A must not read or mutate
   actor B's data — assert it at the HTTP and service entry points, not just the model.
-- **Before any wipe/migration in tests** (`migrate:fresh`, refresh-database), confirm you're on a
-  **disposable** database — the testing environment and its named test connection, a local/throwaway
-  target — never a real or shared one.
+- **Before any test that wipes or migrates a database**, confirm you're on a **disposable** database
+  (a named test connection or a local/throwaway target) — never a real or shared one. *(Skip if the
+  project has no database.)*
 - Run the **narrowest** command that proves the change, not the whole suite, and paste the command + a
   **redacted** summary of its output (exit status, failing test names) as evidence — never real
   PII/secrets from the output. "Tests pass" without evidence is not acceptable.
