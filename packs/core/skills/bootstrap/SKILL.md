@@ -16,6 +16,10 @@ tells agents "«One paragraph — what this project does»", which is worse than
       / `go.mod` / `Cargo.toml` / `Gemfile` / `*.csproj`) and `.ai/.groundrules.json`. Note framework(s),
       the real **test runner**, build tooling, and the **lint / type / static gate** from the project's
       own scripts and CI — don't assume a PHP/JS toolchain.
+- [ ] **Classify the project type** — CLI, library/SDK, web app, API service, data/ML pipeline, desktop.
+      This decides which generic pack rules apply: a CLI or library has no multi-tenancy, DB migrations,
+      request authorization, API serialization, or web-settings hardening; a web app does. Confirm the
+      real frameworks/deps from the manifest rather than assuming (e.g. Django/DRF vs Click/Pluggy).
 - [ ] **Reconcile the repo's own convention docs** — `README`, `CONTRIBUTING`, `docs/`, ADRs,
       `.github/*instructions*`, `.cursor/rules`, existing `CLAUDE.md`/`AGENTS.md`. Reuse the repo's own
       architecture terms; don't re-derive them.
@@ -27,7 +31,12 @@ tells agents "«One paragraph — what this project does»", which is worse than
 - [ ] `.ai/context.md` — what the project is, who uses it, top priorities, domain vocabulary, the real
       run/test/build commands, and where to look first.
 - [ ] Replace **every** `«placeholder»`. If you can't determine something, leave a clearly marked
-      `«TODO: confirm …»` rather than guessing. Correct any stack rule that doesn't match this repo.
+      `«TODO: confirm …»` rather than guessing.
+- [ ] **Prune what doesn't apply.** The stack packs ship broad guidance (Django/DRF, multi-tenancy,
+      migrations, background jobs, API serialization, web-app settings hardening). Based on the project
+      type, **delete or rewrite** the generated `.ai/*.md` rules that don't fit — a CLI or library must
+      not be told to enforce tenant isolation, `ALLOWED_HOSTS`, or DRF serializer allow-lists. Keep only
+      rules that match how this project actually works, and correct any whose commands/idioms differ here.
 
 ## 3. Draft project-specific skills
 - [ ] For each recurring workflow visible in the repo, draft `.ai/skills/<name>/SKILL.md` using the
