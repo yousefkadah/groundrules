@@ -1,7 +1,7 @@
 'use strict';
 
 const path = require('path');
-const { exists, read } = require('../support/fs');
+const { exists, isSymlink, read } = require('../support/fs');
 const { hasAiOptOut, stripManaged } = require('../support/aiPolicy');
 
 /** The CI drift gate: reports adapters out of sync with .ai/. */
@@ -15,6 +15,7 @@ class DriftChecker {
     const drift = [];
     for (const target of this.generator.targets(cwd, opts)) {
       const abs = path.join(cwd, target.path);
+      if (isSymlink(abs)) continue; // symlinked target (user's own) — not managed, so not drift
       if (!exists(abs)) { drift.push({ path: target.path, reason: 'missing' }); continue; }
       const content = read(abs);
       if (hasAiOptOut(stripManaged(content))) continue; // repo's file forbids AI — we don't manage it

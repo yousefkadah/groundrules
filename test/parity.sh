@@ -98,6 +98,8 @@ compare imp_small import "printf 'module x\n' > go.mod; printf '# House\n\n- Mon
 compare imp_large import "printf 'module x\n' > go.mod; { echo '# Big'; seq 1 70 | sed 's/.*/- imported rule & with detail/'; } > CLAUDE.md"
 compare imp_crlf  import "printf 'module x\n' > go.mod; printf '# R\r\n\r\nUse tabs.\r\nWrite tests.\r\n' > CLAUDE.md"
 compare imp_dedup import "printf 'module x\n' > go.mod; printf '# A\n\n## Shared\n\n- a shared line\n- b shared line\n- c shared line\n\n- uniq A only\n' > AGENTS.md; printf '# C\n\n## Shared\n\n- a shared line\n- b shared line\n- c shared line\n\n- uniq C only\n' > CLAUDE.md"
+# symlinked adapter target (the zod pattern: CLAUDE.md -> AGENTS.md) — both engines must skip it
+compare imp_symlink init "printf 'module x\n' > go.mod; printf '# rules\n\n- do a thing\n' > AGENTS.md; ln -s AGENTS.md CLAUDE.md"
 
 echo "==> AI-opt-out detector agreement (drift-gate)"
 optout_agree do_not_use  "Do not use AI or LLM tools in this repository."

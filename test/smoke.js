@@ -332,4 +332,16 @@ function importInto(dir) {
   ok(cursorMain.includes('SMALL-IMPORT-MARKER-QQQ'), 'a small imported context stays inline in the always-on rule');
 }
 
+// 19. symlinked adapter target (CLAUDE.md -> AGENTS.md, the zod pattern): skipped, not clobbered, not drift
+{
+  const dir = scaffold({ 'go.mod': 'module x\n', 'AGENTS.md': '# existing\n' });
+  fs.symlinkSync('AGENTS.md', path.join(dir, 'CLAUDE.md')); // CLAUDE.md -> AGENTS.md
+  const d = lib.detect(dir); const c = lib.compose(['core', ...d.stacks]);
+  const p = []; p.dryRun = false; lib.writeCanonical(dir, c, p);
+  const plan = lib.emit(dir, {}); // must NOT throw on the symlinked target
+  ok(plan.some((e) => e.path === 'CLAUDE.md' && e.action === 'symlink'), 'symlinked CLAUDE.md is skipped, not written');
+  ok(fs.lstatSync(path.join(dir, 'CLAUDE.md')).isSymbolicLink(), 'CLAUDE.md is still a symlink (not clobbered through)');
+  ok(lib.check(dir, {}).every((x) => x.path !== 'CLAUDE.md'), 'check does not flag the symlinked target as perpetual drift');
+}
+
 console.log(`ok - ${passed} smoke assertions passed`);

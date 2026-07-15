@@ -930,6 +930,12 @@ fn write_canonical(cwd: &Path, c: &Composed, force: bool, dry: bool) {
 fn generate(cwd: &Path, all: bool, tools: &Option<Vec<String>>, dry: bool, fresh: &HashSet<String>) {
     for t in build_targets(cwd, all, tools) {
         let target = cwd.join(&t.path);
+        // A symlinked adapter target (e.g. CLAUDE.md -> AGENTS.md) is the user's own;
+        // never write through it. The real target stays managed, so it resolves fine.
+        if fs::symlink_metadata(&target).map(|m| m.file_type().is_symlink()).unwrap_or(false) {
+            println!("  \u{b7} {} (skipped — symlink, left as-is)", t.path);
+            continue;
+        }
         let disk = fs::read_to_string(&target).unwrap_or_default();
         if !disk.is_empty() && has_ai_opt_out(&strip_managed(&disk)) {
             println!("  \u{26a0} {} (skipped — repo AI policy)", t.path);
@@ -970,6 +976,9 @@ fn check(cwd: &Path, all: bool, tools: &Option<Vec<String>>) -> i32 {
     let mut drift: Vec<(String, String)> = Vec::new();
     for t in build_targets(cwd, all, tools) {
         let target = cwd.join(&t.path);
+        if fs::symlink_metadata(&target).map(|m| m.file_type().is_symlink()).unwrap_or(false) {
+            continue; // symlinked target (user's own) — not managed, so not drift
+        }
         if !target.exists() {
             drift.push((t.path.clone(), "missing".to_string()));
             continue;

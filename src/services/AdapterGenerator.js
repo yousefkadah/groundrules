@@ -3,7 +3,7 @@
 const path = require('path');
 const { ADAPTERS } = require('../config/adapters');
 const strat = require('../strategies');
-const { exists, read, write, listDirs, copyDir } = require('../support/fs');
+const { exists, isSymlink, read, write, listDirs, copyDir } = require('../support/fs');
 const { hasAiOptOut, stripManaged } = require('../support/aiPolicy');
 
 const DESC_ALWAYS = 'Project engineering standards, security guardrails, and skills for AI agents (always applied) — managed by groundrules.';
@@ -79,6 +79,10 @@ class AdapterGenerator {
 
     for (const target of this.targets(cwd, opts)) {
       const abs = path.join(cwd, target.path);
+      // A symlinked adapter target is the user's own (e.g. CLAUDE.md -> AGENTS.md) —
+      // never write through it, and leave it as-is. The real target (AGENTS.md) is
+      // still managed, so the symlink resolves to managed content.
+      if (isSymlink(abs)) { plan.push({ path: target.path, action: 'symlink' }); continue; }
       const onDisk = exists(abs) ? read(abs) : '';
       if (onDisk && hasAiOptOut(stripManaged(onDisk))) { plan.push({ path: target.path, action: 'skipped' }); continue; }
       const existing = fresh.has(target.path) ? '' : onDisk;

@@ -33,8 +33,8 @@ ${paint('bold', 'Examples')}
 class Printer {
   /* eslint-disable no-console */
   plan(plan) {
-    const icon = { create: paint('green', '  +'), overwrite: paint('yellow', '  ~'), update: paint('yellow', '  ~'), unchanged: paint('dim', '  ='), kept: paint('dim', '  ·'), skipped: paint('yellow', '  ⚠') };
-    const suffix = { unchanged: paint('dim', ' (unchanged)'), kept: paint('dim', ' (kept — --force to overwrite)'), skipped: paint('yellow', ' (skipped — repo AI policy)') };
+    const icon = { create: paint('green', '  +'), overwrite: paint('yellow', '  ~'), update: paint('yellow', '  ~'), unchanged: paint('dim', '  ='), kept: paint('dim', '  ·'), skipped: paint('yellow', '  ⚠'), symlink: paint('dim', '  ·') };
+    const suffix = { unchanged: paint('dim', ' (unchanged)'), kept: paint('dim', ' (kept — --force to overwrite)'), skipped: paint('yellow', ' (skipped — repo AI policy)'), symlink: paint('dim', ' (skipped — symlink, left as-is)') };
     for (const p of plan) console.log(`${icon[p.action] || '  ?'} ${p.path}${suffix[p.action] || ''}`);
   }
 
