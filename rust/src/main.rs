@@ -1186,3 +1186,135 @@ fn main() {
         }
     }
 }
+
+// ------------------------------- tests --------------------------------------
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    #[test]
+    fn split_section_basic() {
+        let text = "core one\n\n### Laravel / PHP specifics\n\nlaravel rule\n\n### Vue / Inertia specifics\n\nvue rule";
+        let (head, tails) = split_section(text, &["Laravel / PHP".to_string(), "Vue / Inertia".to_string()]);
+        assert_eq!(head, "core one");
+        assert_eq!(tails.iter().find(|(n, _)| n == "Laravel / PHP").unwrap().1, "laravel rule");
+        assert_eq!(tails.iter().find(|(n, _)| n == "Vue / Inertia").unwrap().1, "vue rule");
+    }
+
+    #[test]
+    fn split_section_start_of_string() {
+        let (head, tails) = split_section("### Go specifics\n\ngo rule", &["Go".to_string()]);
+        assert_eq!(head, "");
+        assert_eq!(tails[0].1, "go rule");
+    }
+
+    #[test]
+    fn split_section_no_marker() {
+        let (head, tails) = split_section("just core", &["Laravel / PHP".to_string()]);
+        assert_eq!(head, "just core");
+        assert!(tails.is_empty());
+    }
+
+    #[test]
+    fn ai_opt_out_detects() {
+        for s in [
+            "No AI-generated pull requests are accepted.",
+            "Do not use AI or LLM tools in this repository.",
+            "AI-generated code is not accepted.",
+            "LLM output is prohibited here.",
+            "Please don't submit AI-generated code.",
+            "No LLM contributions.",
+            "AI contributions are not welcome.",
+        ] {
+            assert!(has_ai_opt_out(s), "should detect: {}", s);
+        }
+    }
+
+    #[test]
+    fn ai_opt_out_no_false_positive() {
+        for s in [
+            "We use AI to assist development.",
+            "This will not run without AI keys configured.",
+            "AI-assisted contributions are welcome.",
+            "We use Laravel and write good tests.",
+            "The AI revolution is not stopping.",
+        ] {
+            assert!(!has_ai_opt_out(s), "should NOT detect: {}", s);
+        }
+    }
+
+    #[test]
+    fn strip_frontmatter_variants() {
+        assert_eq!(strip_frontmatter("---\nname: x\n---\nbody here"), "body here");
+        assert_eq!(strip_frontmatter("no frontmatter"), "no frontmatter");
+        // a 4-dash close leaves the extra dash in the body (mirrors the JS regex)
+        assert_eq!(strip_frontmatter("---\na: b\n----\nbody"), "-\nbody");
+    }
+
+    #[test]
+    fn upsert_managed_create_and_replace() {
+        let created = upsert_managed("", "hello");
+        assert!(created.contains(MARK_START) && created.contains("hello"));
+        let again = upsert_managed(&created, "world");
+        assert!(again.contains("world") && !again.contains("hello"));
+        assert_eq!(again.matches(MARK_START).count(), 1);
+    }
+
+    #[test]
+    fn upsert_managed_preserves_outside() {
+        let existing = format!("my note\n\n{}\nold\n{}\n", MARK_START, MARK_END);
+        let out = upsert_managed(&existing, "new");
+        assert!(out.starts_with("my note"));
+        assert!(out.contains("new") && !out.contains("old"));
+    }
+
+    #[test]
+    fn dedup_blocks_drops_repeated_multiline_keeps_single() {
+        let mut seen: HashSet<String> = HashSet::new();
+        let a = dedup_blocks("# A\n\n- x\n- y\n- z\n\n- uniqA", &mut seen);
+        assert!(a.contains("uniqA") && a.contains("- x\n- y\n- z"));
+        let b = dedup_blocks("# B\n\n- x\n- y\n- z\n\n- uniqB", &mut seen);
+        assert!(b.contains("uniqB"), "unique single-line kept");
+        assert!(!b.contains("- x\n- y\n- z"), "repeated multi-line block dropped");
+    }
+
+    #[test]
+    fn extract_rules_strips_plumbing_and_crlf() {
+        let content = "# Rules\r\n\r\n@AGENTS.md\r\n- keep this\r\n";
+        let out = extract_rules(content);
+        assert!(!out.contains('\r'), "CRLF stripped to LF");
+        assert!(out.contains("keep this") && !out.contains("@AGENTS.md"));
+    }
+
+    #[test]
+    fn frontmatter_parses_name_desc() {
+        let (n, d) = frontmatter("---\nname: \"widget\"  \ndescription: 'does stuff'\n---\nbody");
+        assert_eq!(n, "widget");
+        assert_eq!(d, "does stuff");
+    }
+
+    #[test]
+    fn cursor_mdc_frontmatter() {
+        let always = cursor_mdc("body", true, &[], "desc");
+        assert!(always.contains("alwaysApply: true"));
+        assert!(always.contains("globs:\n"));
+        let scoped = cursor_mdc("body", false, &["**/*.php".to_string(), "artisan".to_string()], "d");
+        assert!(scoped.contains("globs: **/*.php,artisan"));
+        assert!(scoped.contains("alwaysApply: false"));
+    }
+
+    #[test]
+    fn copilot_scoped_frontmatter() {
+        let out = copilot_scoped("body", "**/*.py");
+        assert!(out.contains("applyTo: \"**/*.py\""));
+        assert!(out.contains(MARK_START));
+    }
+
+    #[test]
+    fn collapse_blank_caps_newlines() {
+        assert_eq!(collapse_blank("a\n\n\n\nb"), "a\n\nb");
+        assert_eq!(collapse_blank("a\nb"), "a\nb");
+    }
+}

@@ -15,7 +15,9 @@
     "packs"
   ],
   "scripts": {
-    "test": "node test/smoke.js"
+    "test": "node test/smoke.js",
+    "test:rust": "cargo test --release --manifest-path rust/Cargo.toml",
+    "test:parity": "bash test/parity.sh"
   },
   "repository": {
     "type": "git",

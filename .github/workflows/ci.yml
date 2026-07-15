@@ -5,7 +5,8 @@ on:
   pull_request:
 
 jobs:
-  test:
+  smoke:
+    name: Node smoke tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,3 +15,22 @@ jobs:
           node-version: 20
       - name: Smoke test the engine + packs
         run: node test/smoke.js
+
+  rust-tests:
+    name: Rust unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: cargo test
+        run: cargo test --release --manifest-path rust/Cargo.toml
+
+  parity:
+    name: JS <-> Rust byte-parity gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Build both engines and diff their output
+        run: bash test/parity.sh

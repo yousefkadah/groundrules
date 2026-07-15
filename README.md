@@ -173,9 +173,11 @@ The content packs in `packs/` are the product; the engine above is deliberately 
 
 ## Status
 
-Working MVP — the Node engine (detect · compose · generate · check) is smoke-tested and CI-gated. The npm
-package is scoped (`@yousefkadah/groundrules`) because the bare name was taken; the CLI command is still
-`groundrules`.
+Working MVP — the Node engine (detect · compose · generate · check) is smoke-tested and CI-gated. The Node
+CLI and the Rust binary are held to **byte-identical output** by a CI parity gate (`test/parity.sh` builds
+both and diffs them across a stack + import matrix), so `check` can never disagree between npx and brew;
+the Rust engine also has its own `cargo test` unit suite. The npm package is scoped
+(`@yousefkadah/groundrules`) because the bare name was taken; the CLI command is still `groundrules`.
 
 ## License
 
