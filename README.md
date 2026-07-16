@@ -31,9 +31,8 @@ Every coding agent reads a different file — `CLAUDE.md`, `AGENTS.md`, `.cursor
 Groundrules keeps **one canonical source** (`.ai/`) and generates the rest, so your standards are written
 once and every agent obeys the same rules.
 
-It's not "another rules generator" — it's a **curated, security-first standards library** that happens
-to ship with a generator. The value is the content in `packs/`, authored to staff-engineer quality and
-**stress-tested on real code** (see [Battle-tested](#battle-tested)).
+It's not just another rules generator — it's a **curated, security-first standards library** with a
+generator attached. The value is the content in `packs/`, tested against real codebases.
 
 ## Quick start
 
@@ -108,7 +107,7 @@ adds only stack-specific detail (commands, idioms, deps) under each section. One
 
 | Pack | Fires on | Adds |
 |---|---|---|
-| `core` | always | security-first guardrails · testing discipline · code-review · PR hygiene · 6 skills |
+| `core` | always | security-first guardrails · testing discipline · code-review · PR hygiene · reusable skills |
 | `laravel-php` | `artisan` / `laravel/framework` | Pest·PHPUnit detection, service-vs-FormRequest validation, `queue:restart`, phpstan/psalm gate — **recommends Laravel Boost** |
 | `vue` | `vue` / `@inertiajs/vue3` | Vue/Inertia conventions, a11y, SSR/hydration (no TypeScript assumed) |
 | `node-ts` | `tsconfig` / `typescript` | TS-strict, vitest/jest |
@@ -120,14 +119,12 @@ adds only stack-specific detail (commands, idioms, deps) under each section. One
 
 Adding a pack = a folder with `pack.json` + `sections/*.md` (+ optional `skills/`). Contributions welcome.
 
-## Battle-tested
+## Tested on real code
 
-The packs aren't hand-waved. Groundrules was run on a real, production-scale Laravel + Vue app
-([Monica](https://github.com/monicahq/monica)) and the generated guidance was audited by **OpenAI Codex**
-*and* an independent Opus operator, over three rounds — feeding every finding back into the packs until
-Codex reported **no critical or high issues remaining**. That loop caught and fixed things a generic
-template ships wrong: Pest-vs-PHPUnit detection, validation that fits a service-layer app, tenant
-isolation beyond queries, an instruction-trust hierarchy, webhook/OAuth hardening, and more.
+The packs aren't hand-waved. They're validated against real open-source projects across each stack — an
+independent model audits the generated guidance for a given repo and findings are fed back into the packs.
+That's what separates a curated standards library from a generic template: it ships the right test runner,
+validation that fits the app's architecture, and framework-specific hardening, not boilerplate.
 
 ## CI drift gate
 
@@ -147,15 +144,13 @@ into your repo's `.github/workflows/` to fail a PR when `.ai/` changed but the a
 
 ## Roadmap
 
-- ✅ **Node-free single binary** via `brew` (Rust port; byte-identical output to `npx`, drift-gated across both).
-- ✅ **Rule import** — adopt an existing `CLAUDE.md`/`.cursorrules`/Copilot/Gemini setup.
-- ✅ **Always-on + path-scoped rules** (Cursor `globs`/`alwaysApply`, Copilot `applyTo`).
-- A thin `groundrules.json` config file (pin targets, stack overrides, opt-outs) — flag-only today.
-- More stack packs and long-tail adapters (Windsurf shipping; Cline/Junie/Aider ride the `AGENTS.md` standard) — contributions welcome.
+- A `groundrules.json` config file to pin targets, stack overrides, and opt-outs.
+- Project-type awareness, so a CLI or library doesn't inherit web-app rules.
+- More stack packs and adapters — contributions welcome.
 
 ## Architecture
 
-Groundrules is a small, layered codebase (zero runtime dependencies) — not one big file:
+A small, layered engine with zero runtime dependencies:
 
 ```
 src/
@@ -168,16 +163,13 @@ src/
 └── support/        fs · ansi · frontmatter · managed-block helpers
 ```
 
-The content packs in `packs/` are the product; the engine above is deliberately thin and testable
-(`node test/smoke.js`).
+The content packs in `packs/` are the product; the engine is deliberately thin and testable. The same
+packs power a zero-dep Node CLI and a node-free Rust binary, kept byte-identical by an automated parity
+gate in CI — so `check` never disagrees between `npx` and `brew`.
 
 ## Status
 
-Working MVP — the Node engine (detect · compose · generate · check) is smoke-tested and CI-gated. The Node
-CLI and the Rust binary are held to **byte-identical output** by a CI parity gate (`test/parity.sh` builds
-both and diffs them across a stack + import matrix), so `check` can never disagree between npx and brew;
-the Rust engine also has its own `cargo test` unit suite. The npm package is scoped
-(`@yousefkadah/groundrules`) because the bare name was taken; the CLI command is still `groundrules`.
+Published as `@yousefkadah/groundrules` (the bare name was taken); the command is `groundrules`.
 
 ## License
 
