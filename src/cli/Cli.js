@@ -10,14 +10,21 @@ const CheckCommand = require('./commands/CheckCommand');
 const DetectCommand = require('./commands/DetectCommand');
 const ImportCommand = require('./commands/ImportCommand');
 
+const { ARCHETYPES } = require('../support/archetypeFilter');
+
 const BOOL_FLAGS = { '--dry-run': 'dryRun', '-n': 'dryRun', '--yes': 'yes', '-y': 'yes', '--all': 'all', '--force': 'force' };
 
 /** Parse argv strictly — unknown options are an error, not silently ignored. */
 function parseArgs(argv) {
-  const args = { _: [], tools: null, dryRun: false, yes: false, all: false, force: false, cwd: process.cwd() };
+  const args = { _: [], tools: null, dryRun: false, yes: false, all: false, force: false, archetype: null, cwd: process.cwd() };
   for (const a of argv) {
     if (a === '-h' || a === '--help') { args._.push('help'); continue; }
     if (Object.prototype.hasOwnProperty.call(BOOL_FLAGS, a)) { args[BOOL_FLAGS[a]] = true; continue; }
+    if (a.startsWith('--archetype=')) {
+      const v = a.slice(12).trim();
+      if (!ARCHETYPES.includes(v)) throw new Error(`--archetype must be one of: ${ARCHETYPES.join(', ')}`);
+      args.archetype = v; continue;
+    }
     if (a.startsWith('--tools=')) { args.tools = a.slice(8).split(',').map((s) => s.trim()).filter(Boolean); continue; }
     if (a.startsWith('--cwd=')) { args.cwd = path.resolve(a.slice(6)); continue; }
     if (a.startsWith('-')) throw new Error(`unknown option: ${a}`);

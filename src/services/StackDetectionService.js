@@ -3,7 +3,6 @@
 const path = require('path');
 const detectors = require('../detectors');
 const DetectionResult = require('../models/DetectionResult');
-const { detectArchetype } = require('../detectors/archetype');
 const { exists } = require('../support/fs');
 
 const AGENT_MARKERS = [
@@ -35,7 +34,7 @@ class StackDetectionService {
     const existingAgents = AGENT_MARKERS
       .filter(([, p]) => exists(path.join(cwd, p)))
       .map(([label]) => label);
-    return new DetectionResult({ stacks, signals, existingAgents, archetype: detectArchetype(cwd) });
+    return new DetectionResult({ stacks, signals, existingAgents });
   }
 }
 

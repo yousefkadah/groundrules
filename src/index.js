@@ -36,7 +36,6 @@ module.exports = {
   ADAPTERS,
   detect: (cwd) => defaultApp.detection.detect(cwd),
   compose: (packIds, archetype) => defaultApp.composition.compose(packIds, archetype),
-  detectArchetype: (cwd) => require('./detectors/archetype').detectArchetype(cwd),
   writeCanonical: (cwd, canonical, plan) => defaultApp.writer.write(cwd, canonical, plan),
   buildBody: (cwd) => defaultApp.bodyBuilder.build(cwd),
   hasPlaceholders: (cwd) => defaultApp.bodyBuilder.hasPlaceholders(cwd),

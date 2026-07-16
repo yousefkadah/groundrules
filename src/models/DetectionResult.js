@@ -1,12 +1,11 @@
 'use strict';
 
-/** The outcome of detection: which packs apply, why, and what kind of project this is. */
+/** The outcome of stack detection: which packs apply and why. */
 class DetectionResult {
-  constructor({ stacks = [], signals = [], existingAgents = [], archetype = 'unknown' } = {}) {
+  constructor({ stacks = [], signals = [], existingAgents = [] } = {}) {
     this.stacks = stacks;
     this.signals = signals;
     this.existingAgents = existingAgents;
-    this.archetype = archetype; // web-app | cli | library | unknown
   }
 }
 

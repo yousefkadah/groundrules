@@ -185,120 +185,32 @@ fn detect(cwd: &Path) -> (Vec<(String, String)>, Vec<String>) {
 // same signal lists, same precedence, same fail-safe. JSON manifests are parsed
 // (not substring-matched) so both ports decide identically.
 
-const WEB_FILES: &[&str] = &["artisan", "manage.py", "bin/rails", "config/application.rb"];
-const WEB_NODE: &[&str] = &[
-    "next", "nuxt", "express", "@nestjs/core", "koa", "fastify", "astro", "@sveltejs/kit",
-    "@remix-run/node", "@react-router/node", "hapi", "@hapi/hapi", "hono", "@hono/node-server",
-    "elysia", "@adonisjs/core", "h3", "nitropack", "@trpc/server", "restify", "polka",
-];
-const WEB_PY: &[&str] = &["django", "fastapi", "flask", "starlette", "tornado", "sanic", "aiohttp", "litestar", "quart", "falcon", "bottle", "pyramid"];
-const WEB_GO: &[&str] = &["gin-gonic/gin", "labstack/echo", "gofiber/fiber", "go-chi/chi", "gorilla/mux"];
-const WEB_RUST: &[&str] = &["axum", "actix-web", "rocket", "warp", "tide", "poem", "salvo", "hyper", "tonic"];
-// CLI frameworks — unambiguous, unlike a bin target (servers have those too).
-const CLI_RUST: &[&str] = &["clap", "structopt"];
-const CLI_GO: &[&str] = &["spf13/cobra", "urfave/cli", "alecthomas/kong", "mitchellh/cli"];
-
 const ARCH_OPEN: &str = "<!-- groundrules:only ";
 const ARCH_CLOSE: &str = "<!-- groundrules:end -->";
+const ARCHETYPES: &[&str] = &["web-app", "cli", "library", "unknown"];
 
-/// JS truthiness for a JSON field, so `if (pkg.bin)` decides the same here.
-fn json_truthy(v: Option<&serde_json::Value>) -> bool {
-    match v {
-        None | Some(serde_json::Value::Null) => false,
-        Some(serde_json::Value::Bool(b)) => *b,
-        Some(serde_json::Value::String(s)) => !s.is_empty(),
-        Some(serde_json::Value::Number(n)) => n.as_f64().map_or(true, |f| f != 0.0),
-        Some(_) => true, // objects/arrays are truthy in JS
-    }
-}
-
-fn json_keys(v: &serde_json::Value, key: &str) -> Vec<String> {
-    v.get(key).and_then(|o| o.as_object()).map(|o| o.keys().cloned().collect()).unwrap_or_default()
-}
-
-/// web-app | cli | library | unknown  (unknown = keep every rule).
-fn detect_archetype(cwd: &Path) -> String {
-    let has = |f: &str| cwd.join(f).exists();
-    // Lossy, like Node's readFileSync(p, 'utf8'): a non-UTF-8 byte in a manifest must not
-    // make Rust see an empty file (and classify differently) where Node sees content.
-    let read_if = |f: &str| {
-        fs::read(cwd.join(f)).map(|b| String::from_utf8_lossy(&b).into_owned()).unwrap_or_default()
-    };
-    let json_of = |f: &str| serde_json::from_str::<serde_json::Value>(&read_if(f)).ok();
-
-    let pkg = json_of("package.json");
-    let composer = json_of("composer.json");
-    let cargo = read_if("Cargo.toml");
-    let gomod = read_if("go.mod");
-    let pyproject = read_if("pyproject.toml");
-
-    // 1) Serves HTTP → the web rules apply.
-    if WEB_FILES.iter().any(|f| has(f)) {
-        return "web-app".to_string();
-    }
-    if let Some(c) = &composer {
-        let mut deps = json_keys(c, "require");
-        deps.extend(json_keys(c, "require-dev"));
-        if deps.iter().any(|d| d.starts_with("laravel/") || d.starts_with("symfony/") || d == "slim/slim") {
-            return "web-app".to_string();
+/// The archetype is DECLARED, never guessed — `--archetype=`, else the value
+/// recorded in `.ai/.groundrules.json`, else `unknown` (which keeps every rule).
+///
+/// We deliberately do NOT infer it. Inferring "this is not a web app" from
+/// manifests proved unsound: real services ship CLIs (consul, etcd, Kubernetes
+/// and Argo CD all depend on cobra while serving authenticated HTTP), and Go's
+/// stdlib net/http never appears in go.mod at all. A wrong guess silently strips
+/// a web app's security rules, so the tool doesn't guess.
+fn resolve_archetype(cwd: &Path, flag: &Option<String>) -> String {
+    if let Some(f) = flag {
+        if ARCHETYPES.contains(&f.as_str()) {
+            return f.clone();
         }
     }
-    if let Some(p) = &pkg {
-        let mut deps = json_keys(p, "dependencies");
-        deps.extend(json_keys(p, "devDependencies"));
-        if deps.iter().any(|d| WEB_NODE.contains(&d.as_str())) {
-            return "web-app".to_string();
-        }
+    let declared = fs::read_to_string(cwd.join(".ai").join(".groundrules.json"))
+        .ok()
+        .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
+        .and_then(|m| m.get("archetype").and_then(|v| v.as_str()).map(|s| s.to_string()));
+    match declared {
+        Some(a) if ARCHETYPES.contains(&a.as_str()) => a,
+        _ => "unknown".to_string(),
     }
-    let py_text = format!("{}{}", pyproject, read_if("requirements.txt")).to_lowercase();
-    if WEB_PY.iter().any(|n| py_text.contains(n)) {
-        return "web-app".to_string();
-    }
-    if WEB_GO.iter().any(|n| gomod.contains(n)) {
-        return "web-app".to_string();
-    }
-    if read_if("Gemfile").contains("rails") {
-        return "web-app".to_string();
-    }
-    if WEB_RUST.iter().any(|n| cargo.contains(n)) {
-        return "web-app".to_string();
-    }
-
-    // 2) Declares an executable via a CLI-specific signal → CLI.
-    //
-    // Only UNAMBIGUOUS evidence counts. Deliberately NOT used, because web services
-    // have them too: a `cmd/` directory (the standard Go service layout),
-    // `src/main.rs` / `[[bin]]` (every Rust binary, servers included), and
-    // `pkg.main` (an `npm init -y` default).
-    if json_truthy(pkg.as_ref().and_then(|p| p.get("bin"))) {
-        return "cli".to_string();
-    }
-    if pyproject.contains("[project.scripts]") || read_if("setup.py").contains("console_scripts") {
-        return "cli".to_string();
-    }
-    if CLI_RUST.iter().any(|n| cargo.contains(n)) {
-        return "cli".to_string();
-    }
-    if CLI_GO.iter().any(|n| gomod.contains(n)) {
-        return "cli".to_string();
-    }
-
-    // 3) Published as a package, with no executable and no web surface → library.
-    // `private: true` can't be published, so it is never a library. `main` alone is
-    // an npm default and proves nothing.
-    if pkg.as_ref().and_then(|p| p.get("private")) == Some(&serde_json::Value::Bool(true)) {
-        return "unknown".to_string();
-    }
-    if json_truthy(pkg.as_ref().and_then(|p| p.get("exports")))
-        || json_truthy(pkg.as_ref().and_then(|p| p.get("files")))
-        || json_truthy(pkg.as_ref().and_then(|p| p.get("publishConfig")))
-        || json_truthy(pkg.as_ref().and_then(|p| p.get("types")))
-        || json_truthy(pkg.as_ref().and_then(|p| p.get("typings")))
-    {
-        return "library".to_string();
-    }
-
-    "unknown".to_string()
 }
 
 fn block_applies(list: &[String], archetype: &str) -> bool {
@@ -1090,7 +1002,7 @@ fn collect_import(cwd: &Path) -> Option<Imported> {
 
 // ------------------------------- write / gen --------------------------------
 
-fn write_canonical(cwd: &Path, c: &Composed, force: bool, dry: bool) {
+fn write_canonical(cwd: &Path, c: &Composed, force: bool, dry: bool, archetype: &str) {
     let ai = cwd.join(".ai");
     for (key, content) in &c.sections {
         let target = ai.join(format!("{}.md", key));
@@ -1122,6 +1034,7 @@ fn write_canonical(cwd: &Path, c: &Composed, force: bool, dry: bool) {
         let manifest = serde_json::json!({
             "tool": "groundrules",
             "packs": c.applied.iter().map(|(id, _)| id.clone()).collect::<Vec<_>>(),
+            "archetype": archetype,
         });
         safe_write(&ai.join(".groundrules.json"), &format!("{}\n", serde_json::to_string_pretty(&manifest).unwrap()));
     }
@@ -1208,9 +1121,9 @@ fn check(cwd: &Path, all: bool, tools: &Option<Vec<String>>) -> i32 {
 /// One line explaining the project type and what it means for the rules.
 fn archetype_line(a: &str) -> String {
     let note = match a {
-        "unknown" => "keeping every rule (fail-safe)",
+        "unknown" => "keeping every rule — declare with --archetype=cli|library|web-app",
         "web-app" => "web-app rules apply",
-        _ => "skipping web-app rules (tenancy, migrations, uploads, deploys)",
+        _ => "skipping web-app rules (tenancy, over-exposure, uploads, deploys)",
     };
     format!("  project type: {} \u{2014} {}", a, note)
 }
@@ -1248,14 +1161,13 @@ fn cmd_detect(cwd: &Path) {
     println!("  packs:   {}", if packs.is_empty() { "none (universal core only)".to_string() } else { packs.join(", ") });
     let sigs: Vec<String> = stacks.iter().map(|(_, s)| s.clone()).collect();
     println!("  signals: {}", if sigs.is_empty() { "none".to_string() } else { sigs.join(", ") });
-    println!("{}", archetype_line(&detect_archetype(cwd)));
     println!("  agents already present: {}", if existing.is_empty() { "none".to_string() } else { existing.join(", ") });
 }
 
-fn cmd_init(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, dry: bool) {
+fn cmd_init(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, dry: bool, arch_flag: &Option<String>) {
     let (stacks, existing) = detect(cwd);
     let ids: Vec<String> = stacks.iter().map(|(id, _)| id.clone()).collect();
-    let archetype = detect_archetype(cwd);
+    let archetype = resolve_archetype(cwd, arch_flag);
     let c = compose(&ids, &archetype);
     println!("\ngroundrules init");
     let det = if ids.is_empty() { "no known stack".to_string() } else { ids.join(" + ") };
@@ -1267,7 +1179,7 @@ fn cmd_init(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, dry
     println!("{}", archetype_line(&archetype));
     println!("  packs applied: {}", c.applied.iter().map(|(_, n)| n.clone()).collect::<Vec<_>>().join(" \u{2192} "));
     println!("\n{}", if dry { "Would write:" } else { "Wrote:" });
-    write_canonical(cwd, &c, force, dry);
+    write_canonical(cwd, &c, force, dry, &archetype);
     generate(cwd, all, tools, dry, &HashSet::new());
     print_recommends(&c);
     print_ai_policy(cwd);
@@ -1283,7 +1195,7 @@ fn cmd_init(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, dry
     }
 }
 
-fn cmd_import(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, dry: bool) {
+fn cmd_import(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, dry: bool, arch_flag: &Option<String>) {
     let found = match collect_import(cwd) {
         Some(f) => f,
         None => {
@@ -1299,7 +1211,7 @@ fn cmd_import(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, d
 
     let (stacks, _existing) = detect(cwd);
     let ids: Vec<String> = stacks.iter().map(|(id, _)| id.clone()).collect();
-    let archetype = detect_archetype(cwd);
+    let archetype = resolve_archetype(cwd, arch_flag);
     let mut c = compose(&ids, &archetype);
     if apply {
         if let Some(entry) = c.sections.iter_mut().find(|(k, _)| k == "context") {
@@ -1317,7 +1229,7 @@ fn cmd_import(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, d
     println!("  your existing rules seed .ai/context.md — the bootstrap skill then sorts them into the right sections");
 
     println!("\n{}", if dry { "Would write:" } else { "Wrote:" });
-    write_canonical(cwd, &c, force, dry);
+    write_canonical(cwd, &c, force, dry, &archetype);
     let fresh: HashSet<String> = if apply { found.consumed.clone() } else { HashSet::new() };
     generate(cwd, all, tools, dry, &fresh);
     print_recommends(&c);
@@ -1342,7 +1254,7 @@ fn cmd_import(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, d
 
 fn print_help() {
     println!(
-        "groundrules — one source of truth for AI coding agents\n\nUsage\n  groundrules <command> [options]\n\nCommands\n  init        Detect the stack, scaffold .ai/ and generate every agent's rules file\n  import      Adopt existing rules (CLAUDE.md/.cursorrules/Copilot/Gemini…) into .ai/, then generate\n  generate    Re-generate all adapters from .ai/ (idempotent)\n  check       Fail (exit 1) if any adapter is out of sync with .ai/\n  detect      Print what would be detected, without writing anything\n\nOptions\n  --dry-run, -n     Show what would change, write nothing\n  --force           Overwrite existing .ai/ files (init is create-only by default)\n  --tools=a,b       Limit adapters (agents,claude,cursor,copilot,gemini,windsurf)\n  --all             Include non-default adapters (e.g. windsurf)\n  --cwd=PATH        Run against another directory"
+        "groundrules — one source of truth for AI coding agents\n\nUsage\n  groundrules <command> [options]\n\nCommands\n  init        Detect the stack, scaffold .ai/ and generate every agent's rules file\n  import      Adopt existing rules (CLAUDE.md/.cursorrules/Copilot/Gemini…) into .ai/, then generate\n  generate    Re-generate all adapters from .ai/ (idempotent)\n  check       Fail (exit 1) if any adapter is out of sync with .ai/\n  detect      Print what would be detected, without writing anything\n\nOptions\n  --dry-run, -n     Show what would change, write nothing\n  --force           Overwrite existing .ai/ files (init is create-only by default)\n  --archetype=T     Declare the project type: web-app, cli, library (default: keep every rule)\n  --tools=a,b       Limit adapters (agents,claude,cursor,copilot,gemini,windsurf)\n  --all             Include non-default adapters (e.g. windsurf)\n  --cwd=PATH        Run against another directory"
     );
 }
 
@@ -1351,6 +1263,7 @@ fn main() {
     let mut cwd = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     let (mut dry, mut all, mut force) = (false, false, false);
     let mut tools: Option<Vec<String>> = None;
+    let mut arch_flag: Option<String> = None;
     let mut cmd = String::new();
 
     for a in &argv {
@@ -1367,6 +1280,13 @@ fn main() {
             // accepted, no-op
         } else if let Some(v) = a.strip_prefix("--cwd=") {
             cwd = PathBuf::from(v);
+        } else if let Some(v) = a.strip_prefix("--archetype=") {
+            let v = v.trim().to_string();
+            if !ARCHETYPES.contains(&v.as_str()) {
+                eprintln!("Error: --archetype must be one of: {}", ARCHETYPES.join(", "));
+                std::process::exit(1);
+            }
+            arch_flag = Some(v);
         } else if let Some(v) = a.strip_prefix("--tools=") {
             tools = Some(v.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect());
         } else if a.starts_with('-') {
@@ -1392,8 +1312,8 @@ fn main() {
 
     match cmd.as_str() {
         "detect" => cmd_detect(&cwd),
-        "init" => cmd_init(&cwd, all, &tools, force, dry),
-        "import" => cmd_import(&cwd, all, &tools, force, dry),
+        "init" => cmd_init(&cwd, all, &tools, force, dry, &arch_flag),
+        "import" => cmd_import(&cwd, all, &tools, force, dry, &arch_flag),
         "generate" | "gen" => {
             if !cwd.join(".ai").is_dir() {
                 eprintln!("No .ai/ found. Run `groundrules init` first.");
@@ -1564,12 +1484,4 @@ mod tests {
         assert_eq!(frontmatter_field("---\nname: x\n---\nbody", "archetypes"), "");
     }
 
-    #[test]
-    fn json_truthy_matches_js() {
-        assert!(!json_truthy(None));
-        assert!(!json_truthy(Some(&serde_json::json!(null))));
-        assert!(!json_truthy(Some(&serde_json::json!(""))));
-        assert!(json_truthy(Some(&serde_json::json!("x"))));
-        assert!(json_truthy(Some(&serde_json::json!({}))), "empty object is truthy in JS");
-    }
 }

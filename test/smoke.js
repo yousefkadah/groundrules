@@ -344,48 +344,23 @@ function importInto(dir) {
   ok(lib.check(dir, {}).every((x) => x.path !== 'CLAUDE.md'), 'check does not flag the symlinked target as perpetual drift');
 }
 
-// 20. archetype detection — what KIND of project is this?
+// 20. archetype is DECLARED, never guessed (auto-detection proved unsound: real services
+//     ship CLIs, and Go's stdlib net/http never appears in go.mod, so a guess silently
+//     stripped a web app's security rules — consul/etcd/k8s/argo were all misclassified).
 {
-  const { detectArchetype } = require('../src/detectors/archetype');
-  ok(detectArchetype(scaffold({ 'artisan': '', 'composer.json': '{}' })) === 'web-app', 'detects a web app (artisan)');
-  ok(detectArchetype(scaffold({ 'package.json': JSON.stringify({ dependencies: { express: '^4' } }) })) === 'web-app', 'detects a web app (express)');
-  ok(detectArchetype(scaffold({ 'package.json': JSON.stringify({ bin: { foo: 'c.js' } }) })) === 'cli', 'detects a CLI (package.json bin)');
-  ok(detectArchetype(scaffold({ 'pyproject.toml': '[project.scripts]\nx = "m:c"\n' })) === 'cli', 'detects a CLI (python scripts)');
-  ok(detectArchetype(scaffold({ 'go.mod': 'module x\nrequire github.com/spf13/cobra v1\n' })) === 'cli', 'detects a CLI (go + cobra)');
-  ok(detectArchetype(scaffold({ 'package.json': JSON.stringify({ exports: './i.js' }) })) === 'library', 'detects a library (exports, no bin)');
-  ok(detectArchetype(scaffold({ 'README.md': '# x' })) === 'unknown', 'unclassifiable → unknown');
-  // a web framework outranks a bin (a Laravel app with artisan is still a web app)
-  ok(detectArchetype(scaffold({ 'artisan': '', 'composer.json': '{}', 'package.json': JSON.stringify({ bin: { x: 'c.js' } }) })) === 'web-app', 'web signal outranks a CLI signal');
-}
-
-// 20a. FAIL-SAFE regressions: ambiguous signals must never classify a web app as cli/library.
-//      Each of these was a confirmed critical — a real web app silently losing its security rules.
-{
-  const { detectArchetype } = require('../src/detectors/archetype');
-  // `npm init -y` emits "main": "index.js" — that is a default, not a library signal.
-  ok(detectArchetype(scaffold({ 'package.json': JSON.stringify({ name: 'x', main: 'index.js' }), 'server.js': 'require("node:http")' })) === 'unknown',
-    'npm-init default main + node:http server → unknown, NOT library');
-  // an unlisted framework must fall through to the fail-safe, not to `library`
-  ok(detectArchetype(scaffold({ 'package.json': JSON.stringify({ main: 'i.js', dependencies: { pg: '^8', 'drizzle-orm': '^0.3' } }) })) === 'unknown',
-    'db-backed app on an unlisted framework → unknown, NOT library');
-  // private packages can't be published, so they are never a library
-  ok(detectArchetype(scaffold({ 'package.json': JSON.stringify({ private: true, exports: './i.js' }) })) === 'unknown',
-    'private:true → unknown, never library');
-  // `cmd/` is the STANDARD Go service layout, not a CLI signal
-  ok(detectArchetype(scaffold({ 'go.mod': 'module x\nrequire github.com/jackc/pgx/v5 v5\n', 'cmd/api/main.go': 'package main' })) === 'unknown',
-    'Go service at cmd/api/main.go → unknown, NOT cli');
-  // every Rust binary has main.rs / [[bin]] — including servers
-  ok(detectArchetype(scaffold({ 'Cargo.toml': '[package]\nname="x"\n[[bin]]\nname="s"\n', 'src/main.rs': 'fn main(){}' })) === 'unknown',
-    'Rust bin target alone → unknown, NOT cli');
-  // PEP-621 [project] is not a library signal
-  ok(detectArchetype(scaffold({ 'pyproject.toml': '[project]\nname = "svc"\n' })) === 'unknown',
-    'PEP-621 [project] alone → unknown, NOT library');
-  // positive CLI evidence still classifies
-  ok(detectArchetype(scaffold({ 'Cargo.toml': '[package]\nname="x"\nclap = "4"\n' })) === 'cli', 'Rust + clap → cli');
-  ok(detectArchetype(scaffold({ 'go.mod': 'module x\nrequire github.com/spf13/cobra v1\n' })) === 'cli', 'Go + cobra → cli');
-  // widened web lists catch more real frameworks
-  ok(detectArchetype(scaffold({ 'package.json': JSON.stringify({ dependencies: { hono: '^4' } }) })) === 'web-app', 'hono → web-app');
-  ok(detectArchetype(scaffold({ 'pyproject.toml': 'litestar = "*"' })) === 'web-app', 'litestar → web-app');
+  const { resolveArchetype, ARCHETYPES } = require('../src/support/archetypeFilter');
+  const { parseArgs } = require('../src/cli/Cli');
+  const dir = scaffold({ 'go.mod': 'module x\nrequire github.com/spf13/cobra v1\n', 'cmd/api/main.go': 'package main' });
+  ok(resolveArchetype(dir, null) === 'unknown', 'no declaration → unknown (a Go service with cobra is NOT guessed as cli)');
+  ok(resolveArchetype(dir, 'cli') === 'cli', 'the --archetype flag declares it');
+  ok(resolveArchetype(dir, 'nonsense') === 'unknown', 'an unknown value falls back to unknown');
+  ok(parseArgs(['init', '--archetype=cli']).archetype === 'cli', '--archetype=cli parses');
+  assert.throws(() => parseArgs(['init', '--archetype=webapp']), 'an invalid --archetype is rejected');
+  ok(ARCHETYPES.includes('web-app') && ARCHETYPES.includes('library'), 'the valid set is exported');
+  // a declaration recorded in .ai/ is picked up by a later run
+  const d2 = scaffold({ 'README.md': '# x', '.ai/.groundrules.json': JSON.stringify({ tool: 'groundrules', packs: ['core'], archetype: 'library' }) });
+  ok(resolveArchetype(d2, null) === 'library', 'a declaration recorded in .ai/ is honoured');
+  ok(resolveArchetype(d2, 'web-app') === 'web-app', 'the flag overrides the recorded value');
 }
 
 // 20b. archetype gating: web-only rules + skills are dropped for a CLI, kept when unknown
@@ -402,6 +377,7 @@ function importInto(dir) {
   // for them (a CLI can own a database or a queue).
   ok(cli.skills.some((s) => s.name === 'add-database-change'), 'a CLI keeps the database skill (it may own a DB)');
   ok(cli.skills.some((s) => s.name === 'bootstrap'), 'universal skills survive gating');
+  ok(lib.compose(['core'], 'cli').archetype === 'cli', 'the composed source carries the declared archetype');
   // DB/migration rules are NOT web-gated either — a CLI can own a datastore
   ok(/wrap related writes in a \*\*transaction\*\*/.test(txt(cli)), 'cli keeps the transaction rule (may own a DB)');
   ok(/disposable/.test(txt(cli)), 'cli keeps the disposable-test-DB guard');

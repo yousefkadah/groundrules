@@ -66,7 +66,21 @@ on top, and generates every adapter. Your rules migrate in; the drift gate keeps
 | `groundrules check` | Exit 1 if any adapter is out of sync with `.ai/` — a **CI drift gate** |
 | `groundrules detect` | Print what would be detected, write nothing |
 
-Flags: `--dry-run`, `--force`, `--tools=agents,claude,cursor,copilot,gemini`, `--all`, `--cwd=PATH`.
+Flags: `--dry-run`, `--force`, `--archetype=web-app|cli|library`, `--tools=agents,claude,cursor,copilot,gemini`, `--all`, `--cwd=PATH`.
+
+### Project type
+
+Web-app rules (tenancy, over-exposure, uploads, deploy steps) are noise in a CLI or library. Declare the
+project type and they're left out:
+
+```bash
+groundrules init --archetype=cli
+```
+
+The tool **never guesses** this — inferring it from manifests is unreliable (real services ship CLIs, and
+some ecosystems have no dependency signal for serving HTTP at all), and a wrong guess would silently strip
+a web app's security rules. Undeclared means **every rule is kept**. The `bootstrap` skill records it in
+`.ai/.groundrules.json` once your agent has read the actual code.
 
 ## What it writes
 
@@ -145,7 +159,6 @@ into your repo's `.github/workflows/` to fail a PR when `.ai/` changed but the a
 ## Roadmap
 
 - A `groundrules.json` config file to pin targets, stack overrides, and opt-outs.
-- Project-type awareness, so a CLI or library doesn't inherit web-app rules.
 - More stack packs and adapters — contributions welcome.
 
 ## Architecture

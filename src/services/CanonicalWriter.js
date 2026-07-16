@@ -35,7 +35,9 @@ class CanonicalWriter {
     }
 
     if (!plan.dryRun) {
-      const manifest = { tool: 'groundrules', packs: canonical.appliedPacks.map((p) => p.id) };
+      // The archetype is recorded so a later `init`/`import` keeps the declared
+      // choice, and so the bootstrap skill can set it for the next compose.
+      const manifest = { tool: 'groundrules', packs: canonical.appliedPacks.map((p) => p.id), archetype: canonical.archetype || 'unknown' };
       write(path.join(aiDir, '.groundrules.json'), JSON.stringify(manifest, null, 2) + '\n');
     }
   }

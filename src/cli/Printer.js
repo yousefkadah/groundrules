@@ -17,6 +17,7 @@ ${paint('bold', 'Commands')}
 ${paint('bold', 'Options')}
   --dry-run, -n     Show what would change, write nothing
   --force           Overwrite existing .ai/ files (init is create-only by default)
+  --archetype=T     Declare the project type: web-app, cli, library (default: keep every rule)
   --tools=a,b       Limit adapters (agents,claude,cursor,copilot,gemini,windsurf)
   --all             Include non-default adapters (e.g. windsurf)
   --cwd=PATH        Run against another directory
@@ -48,13 +49,13 @@ class Printer {
     }
   }
 
-  /** One line explaining the project type and what it means for the rules. */
+  /** One line explaining the DECLARED project type and what it means for the rules. */
   archetypeLine(a) {
     const note = a === 'unknown'
-      ? 'keeping every rule (fail-safe)'
+      ? 'keeping every rule — declare with --archetype=cli|library|web-app'
       : a === 'web-app'
         ? 'web-app rules apply'
-        : 'skipping web-app rules (tenancy, migrations, uploads, deploys)';
+        : 'skipping web-app rules (tenancy, over-exposure, uploads, deploys)';
     return `  project type: ${paint('cyan', a)} ${paint('dim', '— ' + note)}`;
   }
 
@@ -62,7 +63,6 @@ class Printer {
     console.log(paint('bold', 'Stack detection'));
     console.log(`  packs:   ${d.stacks.length ? d.stacks.map((s) => paint('cyan', s)).join(', ') : paint('dim', 'none (universal core only)')}`);
     console.log(`  signals: ${d.signals.length ? d.signals.join(', ') : paint('dim', 'none')}`);
-    console.log(this.archetypeLine(d.archetype));
     console.log(`  agents already present: ${d.existingAgents.length ? d.existingAgents.join(', ') : paint('dim', 'none')}`);
   }
 
@@ -70,7 +70,7 @@ class Printer {
     console.log(paint('bold', '\ngroundrules init'));
     console.log(`  detected: ${d.stacks.length ? d.stacks.map((s) => paint('cyan', s)).join(' + ') : paint('dim', 'no known stack')} ${paint('dim', '[' + (d.signals.join(', ') || 'universal core only') + ']')}`);
     if (d.existingAgents.length) console.log(`  ${paint('dim', 'existing agent files: ' + d.existingAgents.join(', ') + ' (preserved — only managed blocks are touched)')}`);
-    console.log(this.archetypeLine(d.archetype));
+    console.log(this.archetypeLine(canonical.archetype));
     console.log(`  packs applied: ${canonical.appliedPacks.map((p) => paint('cyan', p.name)).join(' → ')}`);
   }
 
@@ -78,7 +78,7 @@ class Printer {
     console.log(paint('bold', '\ngroundrules import'));
     console.log(`  imported rules from: ${found.labels.map((l) => paint('cyan', l)).join(', ')}`);
     console.log(`  detected: ${d.stacks.length ? d.stacks.map((s) => paint('cyan', s)).join(' + ') : paint('dim', 'no known stack')} ${paint('dim', '[' + (d.signals.join(', ') || 'universal core only') + ']')}`);
-    console.log(this.archetypeLine(d.archetype));
+    console.log(this.archetypeLine(canonical.archetype));
     console.log(`  packs applied: ${canonical.appliedPacks.map((p) => paint('cyan', p.name)).join(' → ')}`);
     console.log(`  ${paint('dim', 'your existing rules seed .ai/context.md — the bootstrap skill then sorts them into the right sections')}`);
   }

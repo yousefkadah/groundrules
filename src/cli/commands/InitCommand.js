@@ -8,8 +8,10 @@ class InitCommand {
   }
 
   run(args) {
+    const { resolveArchetype } = require('../../support/archetypeFilter');
     const detection = this.app.detection.detect(args.cwd);
-    const canonical = this.app.composition.compose(['core', ...detection.stacks], detection.archetype);
+    const archetype = resolveArchetype(args.cwd, args.archetype);
+    const canonical = this.app.composition.compose(['core', ...detection.stacks], archetype);
     this.printer.initHeader(detection, canonical);
 
     const plan = [];

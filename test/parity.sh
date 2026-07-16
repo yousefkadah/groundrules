@@ -101,18 +101,14 @@ compare imp_dedup import "printf 'module x\n' > go.mod; printf '# A\n\n## Shared
 # symlinked adapter target (the zod pattern: CLAUDE.md -> AGENTS.md) — both engines must skip it
 compare imp_symlink init "printf 'module x\n' > go.mod; printf '# rules\n\n- do a thing\n' > AGENTS.md; ln -s AGENTS.md CLAUDE.md"
 
-echo "==> archetype gating parity (both engines must classify AND gate identically)"
-compare arch_web_node init "printf '{\"dependencies\":{\"express\":\"^4\"}}' > package.json"
-compare arch_cli_node init "printf '{\"bin\":{\"x\":\"c.js\"}}' > package.json"
-compare arch_library  init "printf '{\"name\":\"lib\",\"exports\":\"./i.js\"}' > package.json"
-compare arch_cli_go   init "printf 'module x\nrequire github.com/spf13/cobra v1.8.0\n' > go.mod"
-compare arch_cli_py   init "printf '[project.scripts]\nx = \"m:c\"\n' > pyproject.toml"
-compare arch_cli_rust init "printf '[package]\nname=\"x\"\nclap = \"4\"\n' > Cargo.toml"
-# fail-safe cases: ambiguous signals must resolve to `unknown` (keep every rule) in BOTH engines
-compare arch_fs_npminit init "printf '{\"name\":\"x\",\"main\":\"index.js\"}' > package.json"
-compare arch_fs_gocmd   init "printf 'module x\nrequire github.com/jackc/pgx/v5 v5.5.0\n' > go.mod; mkdir -p cmd/api; printf 'package main' > cmd/api/main.go"
-compare arch_fs_rustbin init "printf '[package]\nname=\"x\"\n[[bin]]\nname=\"s\"\n' > Cargo.toml; mkdir -p src; printf 'fn main(){}' > src/main.rs"
-compare arch_fs_private init "printf '{\"private\":true,\"exports\":\"./i.js\"}' > package.json"
+echo "==> archetype parity (DECLARED, never guessed)"
+compare arch_declared_web init "printf '{\"name\":\"x\"}' > package.json" --archetype=web-app
+compare arch_declared_cli init "printf '{\"name\":\"x\"}' > package.json" --archetype=cli
+compare arch_declared_lib init "printf '{\"name\":\"x\"}' > package.json" --archetype=library
+# FAIL-SAFE: a Go service that ships a cobra CLI must NOT be guessed as cli — no declaration => unknown => every rule kept
+compare arch_failsafe_go init "printf 'module x\nrequire github.com/spf13/cobra v1.8.0\nrequire github.com/jackc/pgx/v5 v5.5.0\n' > go.mod; mkdir -p cmd/api; printf 'package main' > cmd/api/main.go"
+# a recorded declaration in .ai/ is honoured identically by both engines on a re-run
+compare arch_recorded init "printf '{\"name\":\"x\"}' > package.json; mkdir -p .ai; printf '{\"tool\":\"groundrules\",\"packs\":[\"core\"],\"archetype\":\"library\"}' > .ai/.groundrules.json"
 
 echo "==> AI-opt-out detector agreement (drift-gate)"
 optout_agree do_not_use  "Do not use AI or LLM tools in this repository."

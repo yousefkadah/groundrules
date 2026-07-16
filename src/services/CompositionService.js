@@ -53,6 +53,7 @@ class CompositionService {
       skills: [...skillMap.values()],
       recommends,
       appliedPacks: applied.map((p) => ({ id: p.id, name: p.name })),
+      archetype,
     });
   }
 }

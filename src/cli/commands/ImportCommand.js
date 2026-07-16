@@ -25,8 +25,9 @@ class ImportCommand {
     const contextExists = exists(path.join(args.cwd, '.ai', 'context.md'));
     const applyImport = !contextExists || args.force;
 
+    const { resolveArchetype } = require('../../support/archetypeFilter');
     const detection = this.app.detection.detect(args.cwd);
-    const canonical = this.app.composition.compose(['core', ...detection.stacks], detection.archetype);
+    const canonical = this.app.composition.compose(['core', ...detection.stacks], resolveArchetype(args.cwd, args.archetype));
     if (applyImport) canonical.sections.context = found.body;
 
     this.printer.importHeader(detection, canonical, found);

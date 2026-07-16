@@ -16,10 +16,12 @@ tells agents "«One paragraph — what this project does»", which is worse than
       / `go.mod` / `Cargo.toml` / `Gemfile` / `*.csproj`) and `.ai/.groundrules.json`. Note framework(s),
       the real **test runner**, build tooling, and the **lint / type / static gate** from the project's
       own scripts and CI — don't assume a PHP/JS toolchain.
-- [ ] **Classify the project type** — CLI, library/SDK, web app, API service, data/ML pipeline, desktop.
-      This decides which generic pack rules apply: a CLI or library has no multi-tenancy, DB migrations,
-      request authorization, API serialization, or web-settings hardening; a web app does. Confirm the
-      real frameworks/deps from the manifest rather than assuming (e.g. Django/DRF vs Click/Pluggy).
+- [ ] **Classify the project type and record it.** Decide from the actual code — does it serve HTTP,
+      own a datastore, run workers? — not from a manifest guess. Then set `"archetype"` in
+      `.ai/.groundrules.json` to `web-app`, `cli`, or `library`. The tool never infers this (a wrong
+      guess would strip a web app's security rules), so **you** are the one who knows: a CLI or library
+      has no multi-tenancy, request authorization, API serialization, or web-settings hardening; a web
+      app does. Leave it `unknown` if you're not sure — that keeps every rule.
 - [ ] **Reconcile the repo's own convention docs** — `README`, `CONTRIBUTING`, `docs/`, ADRs,
       `.github/*instructions*`, `.cursor/rules`, existing `CLAUDE.md`/`AGENTS.md`. Reuse the repo's own
       architecture terms; don't re-derive them.
