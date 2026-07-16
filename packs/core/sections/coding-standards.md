@@ -27,12 +27,10 @@ CLI may need none of it):
   values separately, and test DST boundaries.
 - **Retries:** make externally-visible effects **idempotent** so a retry can't double-charge or
   double-send.
-<!-- groundrules:only web-app -->
 - **Multi-step writes:** wrap related writes in a **transaction** and lean on DB constraints
   (unique/FK). Keep transactions **short and DB-only** — no remote calls or slow work while a lock is
   held; dispatch side effects **after commit**.
 - **User-facing text:** route through the repo's **i18n** layer (translation keys, pluralization) and
   keep it RTL-safe.
-<!-- groundrules:end -->
 - **Generators:** prefer the framework's generators, then **move the output to match the repo's layout**
   (module/domain/namespace) if it differs from the framework default — match the neighboring file.

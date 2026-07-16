@@ -46,12 +46,14 @@ Touch only the files the task needs; don't refactor unrelated code; prefer the n
 adding a dependency, check it's real, maintained, correctly spelled (no typosquat), acceptably licensed,
 and review its install scripts; keep the lockfile change minimal.
 
+### Treat incoming files and data as hostile
+Validate type and size before parsing; never trust a caller-supplied filename or path (traversal), and
+don't let input decide where something is written.
 <!-- groundrules:only web-app -->
 ### Don't over-expose data
 Returning a whole internal record to an API/UI is a vulnerability — map to explicit DTOs/resources with
-**allow-listed fields**, never "the whole model and its relations." Treat user-uploaded files as
-hostile: validate type and size, store them privately under a generated name, and authorize every
-download.
+**allow-listed fields**, never "the whole model and its relations." Store user uploads privately under
+a generated name, and authorize every download.
 <!-- groundrules:end -->
 
 ### Destructive actions need a matching go-ahead

@@ -186,10 +186,17 @@ fn detect(cwd: &Path) -> (Vec<(String, String)>, Vec<String>) {
 // (not substring-matched) so both ports decide identically.
 
 const WEB_FILES: &[&str] = &["artisan", "manage.py", "bin/rails", "config/application.rb"];
-const WEB_NODE: &[&str] = &["next", "nuxt", "express", "@nestjs/core", "koa", "fastify", "astro", "@sveltejs/kit", "@remix-run/node", "hapi", "@hapi/hapi"];
-const WEB_PY: &[&str] = &["django", "fastapi", "flask", "starlette", "tornado", "sanic"];
+const WEB_NODE: &[&str] = &[
+    "next", "nuxt", "express", "@nestjs/core", "koa", "fastify", "astro", "@sveltejs/kit",
+    "@remix-run/node", "@react-router/node", "hapi", "@hapi/hapi", "hono", "@hono/node-server",
+    "elysia", "@adonisjs/core", "h3", "nitropack", "@trpc/server", "restify", "polka",
+];
+const WEB_PY: &[&str] = &["django", "fastapi", "flask", "starlette", "tornado", "sanic", "aiohttp", "litestar", "quart", "falcon", "bottle", "pyramid"];
 const WEB_GO: &[&str] = &["gin-gonic/gin", "labstack/echo", "gofiber/fiber", "go-chi/chi", "gorilla/mux"];
-const WEB_RUST: &[&str] = &["axum", "actix-web", "rocket", "warp", "tide"];
+const WEB_RUST: &[&str] = &["axum", "actix-web", "rocket", "warp", "tide", "poem", "salvo", "hyper", "tonic"];
+// CLI frameworks — unambiguous, unlike a bin target (servers have those too).
+const CLI_RUST: &[&str] = &["clap", "structopt"];
+const CLI_GO: &[&str] = &["spf13/cobra", "urfave/cli", "alecthomas/kong", "mitchellh/cli"];
 
 const ARCH_OPEN: &str = "<!-- groundrules:only ";
 const ARCH_CLOSE: &str = "<!-- groundrules:end -->";
@@ -212,7 +219,11 @@ fn json_keys(v: &serde_json::Value, key: &str) -> Vec<String> {
 /// web-app | cli | library | unknown  (unknown = keep every rule).
 fn detect_archetype(cwd: &Path) -> String {
     let has = |f: &str| cwd.join(f).exists();
-    let read_if = |f: &str| fs::read_to_string(cwd.join(f)).unwrap_or_default();
+    // Lossy, like Node's readFileSync(p, 'utf8'): a non-UTF-8 byte in a manifest must not
+    // make Rust see an empty file (and classify differently) where Node sees content.
+    let read_if = |f: &str| {
+        fs::read(cwd.join(f)).map(|b| String::from_utf8_lossy(&b).into_owned()).unwrap_or_default()
+    };
     let json_of = |f: &str| serde_json::from_str::<serde_json::Value>(&read_if(f)).ok();
 
     let pkg = json_of("package.json");
@@ -253,28 +264,37 @@ fn detect_archetype(cwd: &Path) -> String {
         return "web-app".to_string();
     }
 
-    // 2) Ships an executable → CLI.
+    // 2) Declares an executable via a CLI-specific signal → CLI.
+    //
+    // Only UNAMBIGUOUS evidence counts. Deliberately NOT used, because web services
+    // have them too: a `cmd/` directory (the standard Go service layout),
+    // `src/main.rs` / `[[bin]]` (every Rust binary, servers included), and
+    // `pkg.main` (an `npm init -y` default).
     if json_truthy(pkg.as_ref().and_then(|p| p.get("bin"))) {
         return "cli".to_string();
     }
     if pyproject.contains("[project.scripts]") || read_if("setup.py").contains("console_scripts") {
         return "cli".to_string();
     }
-    if cargo.contains("[[bin]]") || has("src/main.rs") {
+    if CLI_RUST.iter().any(|n| cargo.contains(n)) {
         return "cli".to_string();
     }
-    if !gomod.is_empty() && (gomod.contains("spf13/cobra") || gomod.contains("urfave/cli") || has("cmd")) {
+    if CLI_GO.iter().any(|n| gomod.contains(n)) {
         return "cli".to_string();
     }
 
-    // 3) A published package with no executable and no web surface → library.
-    if !cargo.is_empty() && has("src/lib.rs") {
-        return "library".to_string();
+    // 3) Published as a package, with no executable and no web surface → library.
+    // `private: true` can't be published, so it is never a library. `main` alone is
+    // an npm default and proves nothing.
+    if pkg.as_ref().and_then(|p| p.get("private")) == Some(&serde_json::Value::Bool(true)) {
+        return "unknown".to_string();
     }
-    if json_truthy(pkg.as_ref().and_then(|p| p.get("exports"))) || json_truthy(pkg.as_ref().and_then(|p| p.get("main"))) {
-        return "library".to_string();
-    }
-    if pyproject.contains("[project]") {
+    if json_truthy(pkg.as_ref().and_then(|p| p.get("exports")))
+        || json_truthy(pkg.as_ref().and_then(|p| p.get("files")))
+        || json_truthy(pkg.as_ref().and_then(|p| p.get("publishConfig")))
+        || json_truthy(pkg.as_ref().and_then(|p| p.get("types")))
+        || json_truthy(pkg.as_ref().and_then(|p| p.get("typings")))
+    {
         return "library".to_string();
     }
 

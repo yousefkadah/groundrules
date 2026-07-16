@@ -2,9 +2,9 @@
   a major bump and a changelog entry.
 - **If the repo automates releases** (semantic-release, changesets, commit-derived versions), do **not**
   hand-edit version numbers or changelogs — let the workflow derive them from commits.
-<!-- groundrules:only web-app -->
 - Don't ship a migration/backfill without noting ordering and rollback. Prefer **expand-contract**;
-  make backfills chunked and resumable.
+  make backfills chunked and resumable. *(Skip if the project has no database.)*
+<!-- groundrules:only web-app -->
 - Note any **post-deploy step** the change requires (cache/queue restart, asset rebuild, config
   reload). The stack pack below lists the concrete commands for this project.
 <!-- groundrules:end -->

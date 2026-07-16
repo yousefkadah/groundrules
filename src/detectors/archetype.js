@@ -17,10 +17,17 @@ const { exists, read, readJsonSafe } = require('../support/fs');
  */
 
 const WEB_FILES = ['artisan', 'manage.py', 'bin/rails', 'config/application.rb'];
-const WEB_NODE = ['next', 'nuxt', 'express', '@nestjs/core', 'koa', 'fastify', 'astro', '@sveltejs/kit', '@remix-run/node', 'hapi', '@hapi/hapi'];
-const WEB_PY = ['django', 'fastapi', 'flask', 'starlette', 'tornado', 'sanic'];
+const WEB_NODE = [
+  'next', 'nuxt', 'express', '@nestjs/core', 'koa', 'fastify', 'astro', '@sveltejs/kit',
+  '@remix-run/node', '@react-router/node', 'hapi', '@hapi/hapi', 'hono', '@hono/node-server',
+  'elysia', '@adonisjs/core', 'h3', 'nitropack', '@trpc/server', 'restify', 'polka',
+];
+const WEB_PY = ['django', 'fastapi', 'flask', 'starlette', 'tornado', 'sanic', 'aiohttp', 'litestar', 'quart', 'falcon', 'bottle', 'pyramid'];
 const WEB_GO = ['gin-gonic/gin', 'labstack/echo', 'gofiber/fiber', 'go-chi/chi', 'gorilla/mux'];
-const WEB_RUST = ['axum', 'actix-web', 'rocket', 'warp', 'tide'];
+const WEB_RUST = ['axum', 'actix-web', 'rocket', 'warp', 'tide', 'poem', 'salvo', 'hyper', 'tonic'];
+// CLI frameworks — unambiguous, unlike a bin target (servers have those too).
+const CLI_RUST = ['clap', 'structopt'];
+const CLI_GO = ['spf13/cobra', 'urfave/cli', 'alecthomas/kong', 'mitchellh/cli'];
 
 const nodeDeps = (pkg) => [
   ...Object.keys((pkg && pkg.dependencies) || {}),
@@ -53,16 +60,22 @@ function detectArchetype(cwd) {
   if (readIf('Gemfile').includes('rails')) return 'web-app';
   if (WEB_RUST.some((n) => cargo.includes(n))) return 'web-app';
 
-  // 2) Ships an executable → CLI.
+  // 2) Declares an executable via a CLI-specific signal → CLI.
+  //
+  // Only UNAMBIGUOUS evidence counts. Deliberately NOT used, because web
+  // services have them too: a `cmd/` directory (the standard Go service
+  // layout), `src/main.rs` / `[[bin]]` (every Rust binary, including servers),
+  // and `pkg.main` (an `npm init -y` default).
   if (pkg && pkg.bin) return 'cli';
   if (pyproject.includes('[project.scripts]') || readIf('setup.py').includes('console_scripts')) return 'cli';
-  if (cargo.includes('[[bin]]') || has('src/main.rs')) return 'cli';
-  if (gomod && (gomod.includes('spf13/cobra') || gomod.includes('urfave/cli') || has('cmd'))) return 'cli';
+  if (CLI_RUST.some((n) => cargo.includes(n))) return 'cli';
+  if (CLI_GO.some((n) => gomod.includes(n))) return 'cli';
 
-  // 3) A published package with no executable and no web surface → library.
-  if (cargo && has('src/lib.rs')) return 'library';
-  if (pkg && (pkg.exports || pkg.main)) return 'library';
-  if (pyproject.includes('[project]')) return 'library';
+  // 3) Published as a package, with no executable and no web surface → library.
+  // `private: true` can't be published, so it is never a library. `main` alone
+  // is an npm default and proves nothing.
+  if (pkg && pkg.private === true) return 'unknown';
+  if (pkg && (pkg.exports || pkg.files || pkg.publishConfig || pkg.types || pkg.typings)) return 'library';
 
   return 'unknown';
 }

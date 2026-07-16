@@ -5,9 +5,7 @@ Before proposing a change, run yourself through this. Humans use the same list t
 - Happy path *and* failure paths (nulls, empties, timeouts, permission denials)?
 - Any accidental network/DB calls in a loop? Anything unbounded that should be paginated/chunked?
 - Concurrency/ordering assumptions actually hold? Externally-visible effects idempotent?
-<!-- groundrules:only web-app -->
-- Multi-step writes wrapped in a transaction?
-<!-- groundrules:end -->
+- Multi-step writes wrapped in a transaction (if it owns a datastore)?
 
 **Fit**
 - Matches sibling files' structure, naming, and idioms? Reuses existing helpers instead of duplicating?
@@ -24,9 +22,9 @@ Before proposing a change, run yourself through this. Humans use the same list t
 
 **Compatibility & privacy**
 - Public API/contract changes backward-compatible or versioned?
+- Migrations expand-contract, not destructive-in-place (if it owns a datastore)?
 <!-- groundrules:only web-app -->
 - DB / event / queue contract changes safe under a rolling deploy (producer/consumer skew)?
-  Migrations expand-contract, not destructive-in-place?
 <!-- groundrules:end -->
 - PII minimized and redacted in logs/exports; retention respected?
 
