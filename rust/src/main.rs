@@ -1146,6 +1146,14 @@ fn print_recommends(c: &Composed) {
     }
 }
 
+/// Refuse BEFORE writing anything — a warning after the fact is not a guard.
+fn print_ai_policy_refusal(files: &[String]) {
+    println!("\n\u{26a0} This repo restricts AI contributions (see {}).", files.join(", "));
+    println!("  Groundrules writes AI-agent rules files; committing them would itself be an AI-generated contribution.");
+    println!("  Nothing was written.");
+    println!("  If it's your repo, or you're setting this up locally for a human to review, re-run with --ignore-ai-policy.");
+}
+
 fn print_ai_policy(cwd: &Path) {
     let policy = detect_repo_ai_policy(cwd);
     if !policy.is_empty() {
@@ -1164,7 +1172,14 @@ fn cmd_detect(cwd: &Path) {
     println!("  agents already present: {}", if existing.is_empty() { "none".to_string() } else { existing.join(", ") });
 }
 
-fn cmd_init(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, dry: bool, arch_flag: &Option<String>) {
+fn cmd_init(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, dry: bool, arch_flag: &Option<String>, ignore_ai_policy: bool) {
+    // BEFORE anything is written: if the repo forbids AI contributions, refuse.
+    // (Warning after the files are already on disk would not be a guard.)
+    let repo_policy = detect_repo_ai_policy(cwd);
+    if !repo_policy.is_empty() && !ignore_ai_policy {
+        print_ai_policy_refusal(&repo_policy);
+        std::process::exit(1);
+    }
     let (stacks, existing) = detect(cwd);
     let ids: Vec<String> = stacks.iter().map(|(id, _)| id.clone()).collect();
     let archetype = resolve_archetype(cwd, arch_flag);
@@ -1195,7 +1210,12 @@ fn cmd_init(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, dry
     }
 }
 
-fn cmd_import(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, dry: bool, arch_flag: &Option<String>) {
+fn cmd_import(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, dry: bool, arch_flag: &Option<String>, ignore_ai_policy: bool) {
+    let repo_policy = detect_repo_ai_policy(cwd);
+    if !repo_policy.is_empty() && !ignore_ai_policy {
+        print_ai_policy_refusal(&repo_policy);
+        std::process::exit(1);
+    }
     let found = match collect_import(cwd) {
         Some(f) => f,
         None => {
@@ -1254,7 +1274,7 @@ fn cmd_import(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, d
 
 fn print_help() {
     println!(
-        "groundrules — one source of truth for AI coding agents\n\nUsage\n  groundrules <command> [options]\n\nCommands\n  init        Detect the stack, scaffold .ai/ and generate every agent's rules file\n  import      Adopt existing rules (CLAUDE.md/.cursorrules/Copilot/Gemini…) into .ai/, then generate\n  generate    Re-generate all adapters from .ai/ (idempotent)\n  check       Fail (exit 1) if any adapter is out of sync with .ai/\n  detect      Print what would be detected, without writing anything\n\nOptions\n  --dry-run, -n     Show what would change, write nothing\n  --force           Overwrite existing .ai/ files (init is create-only by default)\n  --archetype=T     Declare the project type: web-app, cli, library (default: keep every rule)\n  --tools=a,b       Limit adapters (agents,claude,cursor,copilot,gemini,windsurf)\n  --all             Include non-default adapters (e.g. windsurf)\n  --cwd=PATH        Run against another directory"
+        "groundrules — one source of truth for AI coding agents\n\nUsage\n  groundrules <command> [options]\n\nCommands\n  init        Detect the stack, scaffold .ai/ and generate every agent's rules file\n  import      Adopt existing rules (CLAUDE.md/.cursorrules/Copilot/Gemini…) into .ai/, then generate\n  generate    Re-generate all adapters from .ai/ (idempotent)\n  check       Fail (exit 1) if any adapter is out of sync with .ai/\n  detect      Print what would be detected, without writing anything\n\nOptions\n  --dry-run, -n     Show what would change, write nothing\n  --force           Overwrite existing .ai/ files (init is create-only by default)\n  --ignore-ai-policy  Proceed even if the repo forbids AI contributions\n  --archetype=T     Declare the project type: web-app, cli, library (default: keep every rule)\n  --tools=a,b       Limit adapters (agents,claude,cursor,copilot,gemini,windsurf)\n  --all             Include non-default adapters (e.g. windsurf)\n  --cwd=PATH        Run against another directory"
     );
 }
 
@@ -1262,6 +1282,7 @@ fn main() {
     let argv: Vec<String> = env::args().skip(1).collect();
     let mut cwd = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
     let (mut dry, mut all, mut force) = (false, false, false);
+    let mut ignore_ai_policy = false;
     let mut tools: Option<Vec<String>> = None;
     let mut arch_flag: Option<String> = None;
     let mut cmd = String::new();
@@ -1276,6 +1297,8 @@ fn main() {
             all = true;
         } else if a == "--force" {
             force = true;
+        } else if a == "--ignore-ai-policy" {
+            ignore_ai_policy = true;
         } else if a == "--yes" || a == "-y" {
             // accepted, no-op
         } else if let Some(v) = a.strip_prefix("--cwd=") {
@@ -1312,8 +1335,8 @@ fn main() {
 
     match cmd.as_str() {
         "detect" => cmd_detect(&cwd),
-        "init" => cmd_init(&cwd, all, &tools, force, dry, &arch_flag),
-        "import" => cmd_import(&cwd, all, &tools, force, dry, &arch_flag),
+        "init" => cmd_init(&cwd, all, &tools, force, dry, &arch_flag, ignore_ai_policy),
+        "import" => cmd_import(&cwd, all, &tools, force, dry, &arch_flag, ignore_ai_policy),
         "generate" | "gen" => {
             if !cwd.join(".ai").is_dir() {
                 eprintln!("No .ai/ found. Run `groundrules init` first.");

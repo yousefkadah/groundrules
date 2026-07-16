@@ -12,11 +12,11 @@ const ImportCommand = require('./commands/ImportCommand');
 
 const { ARCHETYPES } = require('../support/archetypeFilter');
 
-const BOOL_FLAGS = { '--dry-run': 'dryRun', '-n': 'dryRun', '--yes': 'yes', '-y': 'yes', '--all': 'all', '--force': 'force' };
+const BOOL_FLAGS = { '--dry-run': 'dryRun', '-n': 'dryRun', '--yes': 'yes', '-y': 'yes', '--all': 'all', '--force': 'force', '--ignore-ai-policy': 'ignoreAiPolicy' };
 
 /** Parse argv strictly — unknown options are an error, not silently ignored. */
 function parseArgs(argv) {
-  const args = { _: [], tools: null, dryRun: false, yes: false, all: false, force: false, archetype: null, cwd: process.cwd() };
+  const args = { _: [], tools: null, dryRun: false, yes: false, all: false, force: false, ignoreAiPolicy: false, archetype: null, cwd: process.cwd() };
   for (const a of argv) {
     if (a === '-h' || a === '--help') { args._.push('help'); continue; }
     if (Object.prototype.hasOwnProperty.call(BOOL_FLAGS, a)) { args[BOOL_FLAGS[a]] = true; continue; }

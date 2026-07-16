@@ -17,6 +17,7 @@ ${paint('bold', 'Commands')}
 ${paint('bold', 'Options')}
   --dry-run, -n     Show what would change, write nothing
   --force           Overwrite existing .ai/ files (init is create-only by default)
+  --ignore-ai-policy  Proceed even if the repo forbids AI contributions
   --archetype=T     Declare the project type: web-app, cli, library (default: keep every rule)
   --tools=a,b       Limit adapters (agents,claude,cursor,copilot,gemini,windsurf)
   --all             Include non-default adapters (e.g. windsurf)
@@ -113,6 +114,14 @@ class Printer {
     console.log('\n' + paint('yellow', "⚠ .ai/context.md has «placeholders» — run the bootstrap skill in your agent to fill this project's real context before relying on the rules."));
   }
   placeholderWarningShort() { console.log(paint('yellow', '⚠ .ai/context.md still has «placeholders» — run the bootstrap skill to fill them.')); }
+
+  /** Refuse BEFORE writing anything — a warning after the fact is not a guard. */
+  aiPolicyRefusal(files) {
+    console.log('\n' + paint('yellow', `⚠ This repo restricts AI contributions (see ${files.join(', ')}).`));
+    console.log(paint('dim', '  Groundrules writes AI-agent rules files; committing them would itself be an AI-generated contribution.'));
+    console.log(paint('bold', '  Nothing was written.'));
+    console.log(`  If it's your repo, or you're setting this up locally for a human to review, re-run with ${paint('green', '--ignore-ai-policy')}.`);
+  }
 
   aiPolicyWarning(files, skipped) {
     console.log('\n' + paint('yellow', '⚠ This repo appears to restrict AI contributions' + (files && files.length ? ` (see ${files.join(', ')})` : '') + '.'));

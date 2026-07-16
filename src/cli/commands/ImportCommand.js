@@ -16,6 +16,14 @@ class ImportCommand {
   }
 
   run(args) {
+    const { detectRepoAiPolicy } = require('../../support/aiPolicy');
+    // Refuse before writing — see InitCommand.
+    const repoPolicy = detectRepoAiPolicy(args.cwd);
+    if (repoPolicy.length && !args.ignoreAiPolicy) {
+      this.printer.aiPolicyRefusal(repoPolicy);
+      process.exit(1);
+    }
+
     const found = this.app.importer.collect(args.cwd);
     if (!found.imported) {
       this.printer.importNothing();
@@ -48,10 +56,8 @@ class ImportCommand {
     if (!applyImport) this.printer.importContextKept();
     if (found.superseded && found.superseded.length) this.printer.importSuperseded(found.superseded);
 
-    const { detectRepoAiPolicy } = require('../../support/aiPolicy');
     const skippedPaths = plan.filter((p) => p.action === 'skipped').map((p) => p.path);
-    const policyFiles = detectRepoAiPolicy(args.cwd);
-    if (policyFiles.length || skippedPaths.length) this.printer.aiPolicyWarning(policyFiles, skippedPaths);
+    if (repoPolicy.length || skippedPaths.length) this.printer.aiPolicyWarning(repoPolicy, skippedPaths);
 
     this.printer.importNext(args.dryRun);
   }

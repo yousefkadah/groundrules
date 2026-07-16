@@ -9,6 +9,16 @@ class InitCommand {
 
   run(args) {
     const { resolveArchetype } = require('../../support/archetypeFilter');
+    const { detectRepoAiPolicy } = require('../../support/aiPolicy');
+
+    // BEFORE anything is written: if the repo forbids AI contributions, refuse.
+    // (Warning after the files are already on disk would not be a guard.)
+    const repoPolicy = detectRepoAiPolicy(args.cwd);
+    if (repoPolicy.length && !args.ignoreAiPolicy) {
+      this.printer.aiPolicyRefusal(repoPolicy);
+      process.exit(1);
+    }
+
     const detection = this.app.detection.detect(args.cwd);
     const archetype = resolveArchetype(args.cwd, args.archetype);
     const canonical = this.app.composition.compose(['core', ...detection.stacks], archetype);
@@ -25,10 +35,8 @@ class InitCommand {
     this.printer.wroteHeader(args.dryRun);
     this.printer.plan(plan);
     this.printer.recommends(canonical.recommends);
-    const { detectRepoAiPolicy } = require('../../support/aiPolicy');
     const skippedPaths = plan.filter((p) => p.action === 'skipped').map((p) => p.path);
-    const policyFiles = detectRepoAiPolicy(args.cwd);
-    if (policyFiles.length || skippedPaths.length) this.printer.aiPolicyWarning(policyFiles, skippedPaths);
+    if (repoPolicy.length || skippedPaths.length) this.printer.aiPolicyWarning(repoPolicy, skippedPaths);
     if (this.app.bodyBuilder.hasPlaceholders(args.cwd)) this.printer.placeholderWarning();
     this.printer.nextSteps(args.dryRun);
   }
