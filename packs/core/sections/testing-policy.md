@@ -1,5 +1,5 @@
 **The rule: every behavioral change ships with a test** — new or updated — and the affected tests are
-run and shown to pass before the change is done. The stack pack below names the exact runner and command.
+run and shown to pass before the change is done. The stack pack names the exact runner and command.
 
 - Cover the **happy path and at least one failure path** (invalid input, timeout, unauthorized).
 - **Isolate tests from the outside world** — fake or stub HTTP, mail, queues, notifications, storage,

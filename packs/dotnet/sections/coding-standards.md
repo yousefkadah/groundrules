@@ -1,10 +1,13 @@
 - Enable/honor **nullable reference types**; don't suppress with `!` unless provably safe.
-- **Async:** never block on async (`.Result`/`.Wait()` deadlock); flow `CancellationToken`; suffix async
-  methods `Async`; use `ValueTask` where the API does. A **library that exposes both sync and async paths
-  should keep them separate — don't bridge** (no sync-over-async or async-over-sync).
-- **App-only rules** (constructor-DI wiring, thin controllers, request/model validation, FluentValidation)
-  apply to **app/host** projects — **not to libraries**; a library shouldn't grow public DI/interface
-  surface it doesn't need. Match the project type.
+- **Async:** don't block on async in request/library paths (`.Result`/`.Wait()` deadlock); flow
+  `CancellationToken`; suffix async methods `Async`; use `ValueTask` where the API does. (A deliberate,
+  bounded wait at a shutdown/startup boundary is fine — match the neighbours.) A **library that exposes
+  both sync and async paths should keep them separate — don't bridge** (no sync-over-async or
+  async-over-sync).
+- **App-only rules** (constructor-DI wiring, thin controllers, request/model validation via **whatever the
+  repo uses** — DataAnnotations, FluentValidation, minimal-API filters) apply to **app/host** projects —
+  **not to libraries**; a library shouldn't grow public DI/interface surface it doesn't need. Match the
+  project type.
 - **Time:** prefer an injected `TimeProvider` (or the repo's clock abstraction) over `DateTime.UtcNow` in
   timing logic, so it's testable with virtual time.
 - **`[Obsolete]`:** don't call obsolete APIs in **new** code, but maintaining/testing the supported legacy

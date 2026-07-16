@@ -6,7 +6,7 @@
   make backfills chunked and resumable. *(Skip if the project has no database.)*
 <!-- groundrules:only web-app -->
 - Note any **post-deploy step** the change requires (cache/queue restart, asset rebuild, config
-  reload). The stack pack below lists the concrete commands for this project.
+  reload). The stack pack lists the concrete commands for this project.
 <!-- groundrules:end -->
 - **Get explicit, environment-scoped approval before actually running a release, publish, or deploy
   against a shared/production target** — otherwise just report the exact command for a human to run.

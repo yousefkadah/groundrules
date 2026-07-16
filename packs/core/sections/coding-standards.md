@@ -1,8 +1,8 @@
-These principles are stack-agnostic. Language- and framework-specific rules are added below by the
-active stack pack — those win on any concrete detail (commands, idioms, file layout).
+These principles are stack-agnostic. Language- and framework-specific rules come from the active stack
+pack — those win on any concrete detail (commands, idioms, file layout).
 
 - **Match the neighbors.** Before writing a file, read a sibling in the same area and mirror its
-  structure, naming, and idioms. This beats every generic rule below when they conflict — **except**
+  structure, naming, and idioms. This beats every generic rule here when they conflict — **except**
   the security, isolation, validation, and data-correctness rules, which always outrank a
   neighboring pattern (never copy a legacy insecure or unsafe one).
 - **Reuse before creating.** Look for an existing function/component/helper before adding one.
