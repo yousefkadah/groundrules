@@ -1,6 +1,7 @@
 ---
 name: run-background-job
 description: Use when adding or changing a queued job, listener, or scheduled task — reminders, notifications, webhooks, emails, exports, search indexing. Covers idempotency, dispatch-after-commit, locking, retries/timeouts, failed-job recovery, and tenant re-authorization.
+archetypes: web-app
 ---
 
 # Add / change a background job

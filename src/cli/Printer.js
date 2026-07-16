@@ -48,10 +48,21 @@ class Printer {
     }
   }
 
+  /** One line explaining the project type and what it means for the rules. */
+  archetypeLine(a) {
+    const note = a === 'unknown'
+      ? 'keeping every rule (fail-safe)'
+      : a === 'web-app'
+        ? 'web-app rules apply'
+        : 'skipping web-app rules (tenancy, migrations, uploads, deploys)';
+    return `  project type: ${paint('cyan', a)} ${paint('dim', '— ' + note)}`;
+  }
+
   detection(d) {
     console.log(paint('bold', 'Stack detection'));
     console.log(`  packs:   ${d.stacks.length ? d.stacks.map((s) => paint('cyan', s)).join(', ') : paint('dim', 'none (universal core only)')}`);
     console.log(`  signals: ${d.signals.length ? d.signals.join(', ') : paint('dim', 'none')}`);
+    console.log(this.archetypeLine(d.archetype));
     console.log(`  agents already present: ${d.existingAgents.length ? d.existingAgents.join(', ') : paint('dim', 'none')}`);
   }
 
@@ -59,6 +70,7 @@ class Printer {
     console.log(paint('bold', '\ngroundrules init'));
     console.log(`  detected: ${d.stacks.length ? d.stacks.map((s) => paint('cyan', s)).join(' + ') : paint('dim', 'no known stack')} ${paint('dim', '[' + (d.signals.join(', ') || 'universal core only') + ']')}`);
     if (d.existingAgents.length) console.log(`  ${paint('dim', 'existing agent files: ' + d.existingAgents.join(', ') + ' (preserved — only managed blocks are touched)')}`);
+    console.log(this.archetypeLine(d.archetype));
     console.log(`  packs applied: ${canonical.appliedPacks.map((p) => paint('cyan', p.name)).join(' → ')}`);
   }
 
@@ -66,6 +78,7 @@ class Printer {
     console.log(paint('bold', '\ngroundrules import'));
     console.log(`  imported rules from: ${found.labels.map((l) => paint('cyan', l)).join(', ')}`);
     console.log(`  detected: ${d.stacks.length ? d.stacks.map((s) => paint('cyan', s)).join(' + ') : paint('dim', 'no known stack')} ${paint('dim', '[' + (d.signals.join(', ') || 'universal core only') + ']')}`);
+    console.log(this.archetypeLine(d.archetype));
     console.log(`  packs applied: ${canonical.appliedPacks.map((p) => paint('cyan', p.name)).join(' → ')}`);
     console.log(`  ${paint('dim', 'your existing rules seed .ai/context.md — the bootstrap skill then sorts them into the right sections')}`);
   }

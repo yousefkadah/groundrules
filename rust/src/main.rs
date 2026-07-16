@@ -179,6 +179,179 @@ fn detect(cwd: &Path) -> (Vec<(String, String)>, Vec<String>) {
     (stacks, existing)
 }
 
+// ------------------------------- archetype ----------------------------------
+//
+// Mirrors src/detectors/archetype.js + src/support/archetypeFilter.js exactly:
+// same signal lists, same precedence, same fail-safe. JSON manifests are parsed
+// (not substring-matched) so both ports decide identically.
+
+const WEB_FILES: &[&str] = &["artisan", "manage.py", "bin/rails", "config/application.rb"];
+const WEB_NODE: &[&str] = &["next", "nuxt", "express", "@nestjs/core", "koa", "fastify", "astro", "@sveltejs/kit", "@remix-run/node", "hapi", "@hapi/hapi"];
+const WEB_PY: &[&str] = &["django", "fastapi", "flask", "starlette", "tornado", "sanic"];
+const WEB_GO: &[&str] = &["gin-gonic/gin", "labstack/echo", "gofiber/fiber", "go-chi/chi", "gorilla/mux"];
+const WEB_RUST: &[&str] = &["axum", "actix-web", "rocket", "warp", "tide"];
+
+const ARCH_OPEN: &str = "<!-- groundrules:only ";
+const ARCH_CLOSE: &str = "<!-- groundrules:end -->";
+
+/// JS truthiness for a JSON field, so `if (pkg.bin)` decides the same here.
+fn json_truthy(v: Option<&serde_json::Value>) -> bool {
+    match v {
+        None | Some(serde_json::Value::Null) => false,
+        Some(serde_json::Value::Bool(b)) => *b,
+        Some(serde_json::Value::String(s)) => !s.is_empty(),
+        Some(serde_json::Value::Number(n)) => n.as_f64().map_or(true, |f| f != 0.0),
+        Some(_) => true, // objects/arrays are truthy in JS
+    }
+}
+
+fn json_keys(v: &serde_json::Value, key: &str) -> Vec<String> {
+    v.get(key).and_then(|o| o.as_object()).map(|o| o.keys().cloned().collect()).unwrap_or_default()
+}
+
+/// web-app | cli | library | unknown  (unknown = keep every rule).
+fn detect_archetype(cwd: &Path) -> String {
+    let has = |f: &str| cwd.join(f).exists();
+    let read_if = |f: &str| fs::read_to_string(cwd.join(f)).unwrap_or_default();
+    let json_of = |f: &str| serde_json::from_str::<serde_json::Value>(&read_if(f)).ok();
+
+    let pkg = json_of("package.json");
+    let composer = json_of("composer.json");
+    let cargo = read_if("Cargo.toml");
+    let gomod = read_if("go.mod");
+    let pyproject = read_if("pyproject.toml");
+
+    // 1) Serves HTTP → the web rules apply.
+    if WEB_FILES.iter().any(|f| has(f)) {
+        return "web-app".to_string();
+    }
+    if let Some(c) = &composer {
+        let mut deps = json_keys(c, "require");
+        deps.extend(json_keys(c, "require-dev"));
+        if deps.iter().any(|d| d.starts_with("laravel/") || d.starts_with("symfony/") || d == "slim/slim") {
+            return "web-app".to_string();
+        }
+    }
+    if let Some(p) = &pkg {
+        let mut deps = json_keys(p, "dependencies");
+        deps.extend(json_keys(p, "devDependencies"));
+        if deps.iter().any(|d| WEB_NODE.contains(&d.as_str())) {
+            return "web-app".to_string();
+        }
+    }
+    let py_text = format!("{}{}", pyproject, read_if("requirements.txt")).to_lowercase();
+    if WEB_PY.iter().any(|n| py_text.contains(n)) {
+        return "web-app".to_string();
+    }
+    if WEB_GO.iter().any(|n| gomod.contains(n)) {
+        return "web-app".to_string();
+    }
+    if read_if("Gemfile").contains("rails") {
+        return "web-app".to_string();
+    }
+    if WEB_RUST.iter().any(|n| cargo.contains(n)) {
+        return "web-app".to_string();
+    }
+
+    // 2) Ships an executable → CLI.
+    if json_truthy(pkg.as_ref().and_then(|p| p.get("bin"))) {
+        return "cli".to_string();
+    }
+    if pyproject.contains("[project.scripts]") || read_if("setup.py").contains("console_scripts") {
+        return "cli".to_string();
+    }
+    if cargo.contains("[[bin]]") || has("src/main.rs") {
+        return "cli".to_string();
+    }
+    if !gomod.is_empty() && (gomod.contains("spf13/cobra") || gomod.contains("urfave/cli") || has("cmd")) {
+        return "cli".to_string();
+    }
+
+    // 3) A published package with no executable and no web surface → library.
+    if !cargo.is_empty() && has("src/lib.rs") {
+        return "library".to_string();
+    }
+    if json_truthy(pkg.as_ref().and_then(|p| p.get("exports"))) || json_truthy(pkg.as_ref().and_then(|p| p.get("main"))) {
+        return "library".to_string();
+    }
+    if pyproject.contains("[project]") {
+        return "library".to_string();
+    }
+
+    "unknown".to_string()
+}
+
+fn block_applies(list: &[String], archetype: &str) -> bool {
+    if archetype.is_empty() || archetype == "unknown" {
+        return true; // fail-safe: keep it
+    }
+    list.iter().any(|a| a == archetype)
+}
+
+/// Drop fenced blocks that don't apply, and remove the marker lines.
+fn strip_archetype_blocks(text: &str, archetype: &str) -> String {
+    if text.is_empty() {
+        return String::new();
+    }
+    let mut out: Vec<&str> = Vec::new();
+    let mut skipping = false;
+    for line in text.split('\n') {
+        let t = line.trim();
+        if t.starts_with(ARCH_OPEN) && t.ends_with("-->") {
+            let inner = &t[ARCH_OPEN.len()..t.len() - 3];
+            let list: Vec<String> = inner.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+            skipping = !block_applies(&list, archetype);
+            continue;
+        }
+        if t == ARCH_CLOSE {
+            skipping = false;
+            continue;
+        }
+        if !skipping {
+            out.push(line);
+        }
+    }
+    collapse_blank(&out.join("\n")).trim().to_string()
+}
+
+/// Skills opt into archetypes via frontmatter; no field → always applies.
+fn skill_applies(field: &str, archetype: &str) -> bool {
+    if field.is_empty() {
+        return true;
+    }
+    let list: Vec<String> = field.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+    if list.is_empty() {
+        return true;
+    }
+    block_applies(&list, archetype)
+}
+
+/// Read one frontmatter field (mirrors the JS parseFrontmatter value handling).
+fn frontmatter_field(md: &str, key: &str) -> String {
+    let text = md.strip_prefix('\u{feff}').unwrap_or(md);
+    if !text.starts_with("---") {
+        return String::new();
+    }
+    let prefix = format!("{}:", key);
+    let mut started = false;
+    for line in text.lines() {
+        let l = line.trim_end_matches('\r');
+        if l == "---" {
+            if !started {
+                started = true;
+                continue;
+            }
+            break;
+        }
+        if started {
+            if let Some(v) = l.strip_prefix(&prefix) {
+                return v.trim().trim_matches('"').trim_matches('\'').to_string();
+            }
+        }
+    }
+    String::new()
+}
+
 // ------------------------------- composition --------------------------------
 
 struct Composed {
@@ -190,7 +363,7 @@ struct Composed {
     applied: Vec<(String, String)>,
 }
 
-fn compose(stack_ids: &[String]) -> Composed {
+fn compose(stack_ids: &[String], archetype: &str) -> Composed {
     let mut applied_ids: Vec<String> = vec!["core".to_string()];
     for id in stack_ids {
         if id != "core" {
@@ -200,17 +373,20 @@ fn compose(stack_ids: &[String]) -> Composed {
 
     let mut sections = Vec::new();
     for (key, _title) in SECTIONS {
-        let mut out = pack_section("core", key).unwrap_or_default();
+        let mut out = strip_archetype_blocks(&pack_section("core", key).unwrap_or_default(), archetype);
         for id in stack_ids {
             if id == "core" {
                 continue;
             }
             if let Some(sec) = pack_section(id, key) {
-                if !out.is_empty() {
-                    out = out.trim_end().to_string();
-                    out.push_str("\n\n");
+                let sec = strip_archetype_blocks(&sec, archetype);
+                if !sec.is_empty() {
+                    if !out.is_empty() {
+                        out = out.trim_end().to_string();
+                        out.push_str("\n\n");
+                    }
+                    out.push_str(&format!("### {} specifics\n\n{}", pack_name(id), sec));
                 }
-                out.push_str(&format!("### {} specifics\n\n{}", pack_name(id), sec));
             }
         }
         let out = out.trim().to_string();
@@ -223,6 +399,10 @@ fn compose(stack_ids: &[String]) -> Composed {
     let mut owner: std::collections::HashMap<String, String> = std::collections::HashMap::new();
     for id in &applied_ids {
         for name in pack_skill_names(id) {
+            let sk = pack_file(&format!("{}/skills/{}/SKILL.md", id, name)).unwrap_or("");
+            if !skill_applies(&frontmatter_field(sk, "archetypes"), archetype) {
+                continue;
+            }
             if !owner.contains_key(&name) {
                 order.push(name.clone());
             }
@@ -1005,6 +1185,16 @@ fn check(cwd: &Path, all: bool, tools: &Option<Vec<String>>) -> i32 {
 
 // ------------------------------- commands -----------------------------------
 
+/// One line explaining the project type and what it means for the rules.
+fn archetype_line(a: &str) -> String {
+    let note = match a {
+        "unknown" => "keeping every rule (fail-safe)",
+        "web-app" => "web-app rules apply",
+        _ => "skipping web-app rules (tenancy, migrations, uploads, deploys)",
+    };
+    format!("  project type: {} \u{2014} {}", a, note)
+}
+
 fn print_recommends(c: &Composed) {
     if c.recommends.is_empty() {
         return;
@@ -1038,13 +1228,15 @@ fn cmd_detect(cwd: &Path) {
     println!("  packs:   {}", if packs.is_empty() { "none (universal core only)".to_string() } else { packs.join(", ") });
     let sigs: Vec<String> = stacks.iter().map(|(_, s)| s.clone()).collect();
     println!("  signals: {}", if sigs.is_empty() { "none".to_string() } else { sigs.join(", ") });
+    println!("{}", archetype_line(&detect_archetype(cwd)));
     println!("  agents already present: {}", if existing.is_empty() { "none".to_string() } else { existing.join(", ") });
 }
 
 fn cmd_init(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, dry: bool) {
     let (stacks, existing) = detect(cwd);
     let ids: Vec<String> = stacks.iter().map(|(id, _)| id.clone()).collect();
-    let c = compose(&ids);
+    let archetype = detect_archetype(cwd);
+    let c = compose(&ids, &archetype);
     println!("\ngroundrules init");
     let det = if ids.is_empty() { "no known stack".to_string() } else { ids.join(" + ") };
     let sigs: Vec<String> = stacks.iter().map(|(_, s)| s.clone()).collect();
@@ -1052,6 +1244,7 @@ fn cmd_init(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, dry
     if !existing.is_empty() {
         println!("  existing agent files: {} (preserved — only managed blocks are touched)", existing.join(", "));
     }
+    println!("{}", archetype_line(&archetype));
     println!("  packs applied: {}", c.applied.iter().map(|(_, n)| n.clone()).collect::<Vec<_>>().join(" \u{2192} "));
     println!("\n{}", if dry { "Would write:" } else { "Wrote:" });
     write_canonical(cwd, &c, force, dry);
@@ -1086,7 +1279,8 @@ fn cmd_import(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, d
 
     let (stacks, _existing) = detect(cwd);
     let ids: Vec<String> = stacks.iter().map(|(id, _)| id.clone()).collect();
-    let mut c = compose(&ids);
+    let archetype = detect_archetype(cwd);
+    let mut c = compose(&ids, &archetype);
     if apply {
         if let Some(entry) = c.sections.iter_mut().find(|(k, _)| k == "context") {
             entry.1 = found.body.clone();
@@ -1095,6 +1289,7 @@ fn cmd_import(cwd: &Path, all: bool, tools: &Option<Vec<String>>, force: bool, d
 
     println!("\ngroundrules import");
     println!("  imported rules from: {}", found.labels.join(", "));
+    println!("{}", archetype_line(&archetype));
     let det = if ids.is_empty() { "no known stack".to_string() } else { ids.join(" + ") };
     let sigs: Vec<String> = stacks.iter().map(|(_, s)| s.clone()).collect();
     println!("  detected: {} [{}]", det, if sigs.is_empty() { "universal core only".to_string() } else { sigs.join(", ") });
@@ -1325,5 +1520,36 @@ mod tests {
     fn collapse_blank_caps_newlines() {
         assert_eq!(collapse_blank("a\n\n\n\nb"), "a\n\nb");
         assert_eq!(collapse_blank("a\nb"), "a\nb");
+    }
+
+    #[test]
+    fn strip_archetype_blocks_gates() {
+        let t = "keep\n<!-- groundrules:only web-app -->\nweb only\n<!-- groundrules:end -->\ntail";
+        assert_eq!(strip_archetype_blocks(t, "web-app"), "keep\nweb only\ntail");
+        assert_eq!(strip_archetype_blocks(t, "cli"), "keep\ntail");
+        assert_eq!(strip_archetype_blocks(t, "unknown"), "keep\nweb only\ntail"); // fail-safe
+    }
+
+    #[test]
+    fn skill_applies_rules() {
+        assert!(skill_applies("", "cli"), "no field -> always applies");
+        assert!(!skill_applies("web-app", "cli"));
+        assert!(skill_applies("web-app", "web-app"));
+        assert!(skill_applies("web-app", "unknown"), "fail-safe");
+    }
+
+    #[test]
+    fn frontmatter_field_reads_archetypes() {
+        assert_eq!(frontmatter_field("---\nname: x\narchetypes: web-app\n---\nbody", "archetypes"), "web-app");
+        assert_eq!(frontmatter_field("---\nname: x\n---\nbody", "archetypes"), "");
+    }
+
+    #[test]
+    fn json_truthy_matches_js() {
+        assert!(!json_truthy(None));
+        assert!(!json_truthy(Some(&serde_json::json!(null))));
+        assert!(!json_truthy(Some(&serde_json::json!(""))));
+        assert!(json_truthy(Some(&serde_json::json!("x"))));
+        assert!(json_truthy(Some(&serde_json::json!({}))), "empty object is truthy in JS");
     }
 }

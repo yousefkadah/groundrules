@@ -344,4 +344,48 @@ function importInto(dir) {
   ok(lib.check(dir, {}).every((x) => x.path !== 'CLAUDE.md'), 'check does not flag the symlinked target as perpetual drift');
 }
 
+// 20. archetype detection — what KIND of project is this?
+{
+  const { detectArchetype } = require('../src/detectors/archetype');
+  ok(detectArchetype(scaffold({ 'artisan': '', 'composer.json': '{}' })) === 'web-app', 'detects a web app (artisan)');
+  ok(detectArchetype(scaffold({ 'package.json': JSON.stringify({ dependencies: { express: '^4' } }) })) === 'web-app', 'detects a web app (express)');
+  ok(detectArchetype(scaffold({ 'package.json': JSON.stringify({ bin: { foo: 'c.js' } }) })) === 'cli', 'detects a CLI (package.json bin)');
+  ok(detectArchetype(scaffold({ 'pyproject.toml': '[project.scripts]\nx = "m:c"\n' })) === 'cli', 'detects a CLI (python scripts)');
+  ok(detectArchetype(scaffold({ 'go.mod': 'module x\nrequire github.com/spf13/cobra v1\n' })) === 'cli', 'detects a CLI (go + cobra)');
+  ok(detectArchetype(scaffold({ 'Cargo.toml': '[package]', 'src/lib.rs': '' })) === 'library', 'detects a library (lib.rs)');
+  ok(detectArchetype(scaffold({ 'package.json': JSON.stringify({ exports: './i.js' }) })) === 'library', 'detects a library (exports, no bin)');
+  ok(detectArchetype(scaffold({ 'README.md': '# x' })) === 'unknown', 'unclassifiable → unknown');
+  // a web framework outranks a bin (a Laravel app with artisan is still a web app)
+  ok(detectArchetype(scaffold({ 'artisan': '', 'composer.json': '{}', 'package.json': JSON.stringify({ bin: { x: 'c.js' } }) })) === 'web-app', 'web signal outranks a CLI signal');
+}
+
+// 20b. archetype gating: web-only rules + skills are dropped for a CLI, kept when unknown
+{
+  const txt = (c) => Object.values(c.sections).join('\n');
+  const web = lib.compose(['core'], 'web-app');
+  const cli = lib.compose(['core'], 'cli');
+  const unknown = lib.compose(['core'], 'unknown');
+  ok(/DTOs\/resources/.test(txt(web)), 'web-app keeps the over-exposure rule');
+  ok(!/DTOs\/resources/.test(txt(cli)), 'cli drops the over-exposure rule');
+  ok(/DTOs\/resources/.test(txt(unknown)), 'unknown keeps everything (fail-safe)');
+  ok(!txt(cli).includes('groundrules:only'), 'gating markers never leak into .ai/');
+  ok(web.skills.some((s) => s.name === 'add-database-change'), 'web-app gets the database skill');
+  ok(!cli.skills.some((s) => s.name === 'add-database-change'), 'cli does not get the database skill');
+  ok(!cli.skills.some((s) => s.name === 'run-background-job'), 'cli does not get the background-job skill');
+  ok(unknown.skills.some((s) => s.name === 'run-background-job'), 'unknown keeps the job skill (fail-safe)');
+  ok(cli.skills.some((s) => s.name === 'bootstrap'), 'universal skills survive gating');
+}
+
+// 20c. archetypeFilter unit
+{
+  const { stripArchetypeBlocks, skillApplies } = require('../src/support/archetypeFilter');
+  const t = 'keep\n<!-- groundrules:only web-app -->\nweb only\n<!-- groundrules:end -->\ntail';
+  ok(stripArchetypeBlocks(t, 'web-app') === 'keep\nweb only\ntail', 'keeps a matching block, drops the markers');
+  ok(stripArchetypeBlocks(t, 'cli') === 'keep\ntail', 'drops a non-matching block');
+  ok(stripArchetypeBlocks(t, 'unknown') === 'keep\nweb only\ntail', 'unknown keeps everything');
+  ok(skillApplies('', 'cli') === true, 'a skill without archetypes always applies');
+  ok(skillApplies('web-app', 'cli') === false, 'a web-app skill does not apply to a cli');
+  ok(skillApplies('web-app', 'unknown') === true, 'unknown keeps the skill (fail-safe)');
+}
+
 console.log(`ok - ${passed} smoke assertions passed`);

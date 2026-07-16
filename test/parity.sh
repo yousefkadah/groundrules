@@ -101,6 +101,14 @@ compare imp_dedup import "printf 'module x\n' > go.mod; printf '# A\n\n## Shared
 # symlinked adapter target (the zod pattern: CLAUDE.md -> AGENTS.md) — both engines must skip it
 compare imp_symlink init "printf 'module x\n' > go.mod; printf '# rules\n\n- do a thing\n' > AGENTS.md; ln -s AGENTS.md CLAUDE.md"
 
+echo "==> archetype gating parity (both engines must classify AND gate identically)"
+compare arch_web_node init "printf '{\"dependencies\":{\"express\":\"^4\"}}' > package.json"
+compare arch_cli_node init "printf '{\"bin\":{\"x\":\"c.js\"}}' > package.json"
+compare arch_library  init "printf '{\"name\":\"lib\",\"exports\":\"./i.js\"}' > package.json"
+compare arch_cli_go   init "printf 'module x\nrequire github.com/spf13/cobra v1.8.0\n' > go.mod"
+compare arch_cli_py   init "printf '[project.scripts]\nx = \"m:c\"\n' > pyproject.toml"
+compare arch_lib_rust init "printf '[package]\nname=\"x\"\n' > Cargo.toml; mkdir -p src; touch src/lib.rs"
+
 echo "==> AI-opt-out detector agreement (drift-gate)"
 optout_agree do_not_use  "Do not use AI or LLM tools in this repository."
 optout_agree keys_ok     "This will not run without AI keys configured."

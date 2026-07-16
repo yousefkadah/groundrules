@@ -1,6 +1,7 @@
 ---
 name: add-database-change
 description: Use when adding or changing a database migration or schema — new tables/columns, indexes, foreign keys, or a data backfill. Covers portable, production-safe, zero-downtime schema change and reversible, tested migrations.
+archetypes: web-app
 ---
 
 # Add a database change
