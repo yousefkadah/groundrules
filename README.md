@@ -2,30 +2,6 @@
 
 # Groundrules
 
-> ## ⚠️ Archived — this tool solves a problem you almost certainly don't have
->
-> I measured 45 real repositories before adding more features. **34 ship agent rules; 23 keep more
-> than one file; 78% of those already keep them in sync for free** — 10 with a `ln -s` symlink, 8
-> with a two-line stub. Discourse symlinks `AGENTS.md`, `CLAUDE.md` and `GEMINI.md` all to one file.
-> That is this project's entire value proposition, in three symlinks, with drift made *impossible*
-> rather than merely *checked*.
->
-> Worse, this tool's own output is the best argument against it: it generated `AGENTS.md`,
-> `GEMINI.md` and `.github/copilot-instructions.md` **byte-identical** (same SHA), while Cursor and
-> Copilot now read `AGENTS.md` natively — about **8,020 always-on tokens to deliver 4,000 tokens of
-> unique content**, on every agent turn.
->
-> **Use [rulesync](https://github.com/dyoshikawa/rulesync) or [Ruler](https://github.com/intellectronica/ruler)
-> instead.** They solve the part that isn't free: config whose *formats* diverge (you can't symlink
-> `.mcp.json` to `.codex/config.toml`), plus skills, subagents and hooks. And they ship zero opinions,
-> which turns out to be the right call.
->
-> **📉 [Read the full study →](https://claude.ai/code/artifact/eb1caaf6-98c2-460c-b8ae-88230324b8e4)**
-> — 45 repos, four hypotheses, all four refuted. See [`STUDY.md`](STUDY.md) for the raw findings and
-> [`test/proto/`](test/proto) for the measurement scripts.
->
-> The code below works and is left readable. It just shouldn't be installed.
-
 **One source of truth for AI coding agents.** Detect your stack, scaffold engineering standards +
 skills, and generate every tool's rules file — `AGENTS.md`, `CLAUDE.md`, Cursor, Copilot, Gemini — from
 one place, kept in sync.
