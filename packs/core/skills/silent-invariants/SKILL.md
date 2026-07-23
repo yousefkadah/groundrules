@@ -1,6 +1,6 @@
 ---
 name: silent-invariants
-description: Use ONCE per repo (and after a major refactor) to add a short `## Silent invariants` section to the project's agent rules — the rules whose violation compiles, lints, and passes the whole test suite. Run it AFTER context.md is filled in; it assumes an oriented agent. Padding this section is a failure state.
+description: Add (and later refresh) a short `## Silent invariants` section in the project's agent rules — the rules whose violation compiles, lints, and passes the whole test suite. Run it after context.md is filled in; it assumes an oriented agent, and it is meant to be RE-RUN as the codebase is hardened. Padding this section is a failure state.
 ---
 
 # Silent invariants
@@ -10,6 +10,17 @@ goes red. Writing those down is waste — the machine already says it, louder an
 
 What no machine says is the rule whose violation **compiles, type-checks, lints, and passes the full
 suite**, and is wrong anyway. Those are worth their tokens, and nothing else in this file is.
+
+## Re-run this; it is not a one-shot
+
+This skill compounds. Run it, let the team fix or document what it surfaces, then run it again — the
+admission test (below) will now DROP everything that was fixed, because the fix added the enforcement
+or the test that rule 1 and rule 2 look for, and it will surface the next layer instead of repeating
+itself. Before writing anything on a re-run, read the existing `## Silent invariants` section and the
+rest of the agent rules, and treat each prior item as a candidate to discard: open the code and check
+whether a guard, a global scope, a constraint, or a test now catches it. Report what you discarded and
+why — a shrinking or turning-over section across runs is the signal that the loop is working. This is
+also how the tool improves the agent: what it writes here is what every future session reads first.
 
 Produce **15–25 lines / 5–7 invariants**. Deliver them as a `## Silent invariants` section appended
 to the project's existing agent-rules file (`.ai/context.md`, or the repo's `AGENTS.md`). This is a
